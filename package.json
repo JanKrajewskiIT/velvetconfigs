@@ -1,6 +1,6 @@
 {
   "name": "@jankrajewskiit/configs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared tooling configs (eslint, prettier, stylelint, tsconfig, vite, lint-staged, husky, nginx) used by VelvetUi and consumer apps.",
   "type": "module",
   "license": "MIT",
@@ -58,12 +58,24 @@
     "vite": ">=6"
   },
   "peerDependenciesMeta": {
-    "eslint": { "optional": true },
-    "lint-staged": { "optional": true },
-    "prettier": { "optional": true },
-    "stylelint": { "optional": true },
-    "typescript": { "optional": true },
-    "vite": { "optional": true }
+    "eslint": {
+      "optional": true
+    },
+    "lint-staged": {
+      "optional": true
+    },
+    "prettier": {
+      "optional": true
+    },
+    "stylelint": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@eslint/js": "^9.39.4",
