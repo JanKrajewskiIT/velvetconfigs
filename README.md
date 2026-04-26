@@ -21,19 +21,19 @@ Install the relevant peer dependencies on demand (eslint, prettier, stylelint, t
 
 ## Subpath exports
 
-| Export | Purpose |
-|---|---|
-| `@jankrajewskiit/configs/eslint` | Flat-config factory for SolidJS + TypeScript projects |
-| `@jankrajewskiit/configs/prettier` | Prettier preset (JSON) |
-| `@jankrajewskiit/configs/stylelint` | Stylelint preset (JSON) |
-| `@jankrajewskiit/configs/tsconfig/app` | TS config for browser app code |
-| `@jankrajewskiit/configs/tsconfig/node` | TS config for node-side code |
-| `@jankrajewskiit/configs/tsconfig/app-vite` | `app` + `vite/client` types |
-| `@jankrajewskiit/configs/tsconfig/node-vite` | `node` + `node` types |
-| `@jankrajewskiit/configs/vite` | `createSolidAppViteConfig` factory |
-| `@jankrajewskiit/configs/lint-staged` | `createLintStagedConfig` factory + default |
-| `@jankrajewskiit/configs/husky/pre-commit` | Pre-commit hook script |
-| `@jankrajewskiit/configs/nginx/spa` | Nginx SPA config |
+| Export                                       | Purpose                                               |
+| -------------------------------------------- | ----------------------------------------------------- |
+| `@jankrajewskiit/configs/eslint`             | Flat-config factory for SolidJS + TypeScript projects |
+| `@jankrajewskiit/configs/prettier`           | Prettier preset (JSON)                                |
+| `@jankrajewskiit/configs/stylelint`          | Stylelint preset (JSON)                               |
+| `@jankrajewskiit/configs/tsconfig/app`       | TS config for browser app code                        |
+| `@jankrajewskiit/configs/tsconfig/node`      | TS config for node-side code                          |
+| `@jankrajewskiit/configs/tsconfig/app-vite`  | `app` + `vite/client` types                           |
+| `@jankrajewskiit/configs/tsconfig/node-vite` | `node` + `node` types                                 |
+| `@jankrajewskiit/configs/vite`               | `createSolidAppViteConfig` factory                    |
+| `@jankrajewskiit/configs/lint-staged`        | `createLintStagedConfig` factory + default            |
+| `@jankrajewskiit/configs/husky/pre-commit`   | Pre-commit hook script                                |
+| `@jankrajewskiit/configs/nginx/spa`          | Nginx SPA config                                      |
 
 ## Usage examples
 
