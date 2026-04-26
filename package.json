@@ -1,0 +1,87 @@
+{
+  "name": "@jankrajewskiit/configs",
+  "version": "1.0.0",
+  "description": "Shared tooling configs (eslint, prettier, stylelint, tsconfig, vite, lint-staged, husky, nginx) used by VelvetUi and consumer apps.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JanKrajewskiIT/velvet-configs.git"
+  },
+  "exports": {
+    "./eslint": "./eslint/index.mjs",
+    "./prettier": "./prettier/index.json",
+    "./stylelint": "./stylelint/index.json",
+    "./tsconfig/app": "./tsconfig/app.json",
+    "./tsconfig/node": "./tsconfig/node.json",
+    "./tsconfig/app-vite": "./tsconfig/app-vite.json",
+    "./tsconfig/node-vite": "./tsconfig/node-vite.json",
+    "./vite": {
+      "types": "./vite/index.d.mts",
+      "import": "./vite/index.mjs"
+    },
+    "./lint-staged": {
+      "types": "./lint-staged/index.d.mts",
+      "import": "./lint-staged/index.mjs"
+    },
+    "./husky/pre-commit": "./husky/pre-commit.sh",
+    "./nginx/spa": "./nginx/spa.conf"
+  },
+  "files": [
+    "eslint",
+    "prettier",
+    "stylelint",
+    "tsconfig",
+    "vite",
+    "lint-staged",
+    "husky",
+    "nginx",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run format:check && publint",
+    "prepublishOnly": "npm run verify",
+    "prepare": "husky"
+  },
+  "peerDependencies": {
+    "eslint": ">=9",
+    "lint-staged": ">=16",
+    "prettier": ">=3",
+    "stylelint": ">=17",
+    "typescript": ">=5",
+    "vite": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "eslint": { "optional": true },
+    "lint-staged": { "optional": true },
+    "prettier": { "optional": true },
+    "stylelint": { "optional": true },
+    "typescript": { "optional": true },
+    "vite": { "optional": true }
+  },
+  "dependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-css-modules": "^2.12.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "eslint-plugin-solid": "^0.14.5",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.5.0",
+    "stylelint-config-standard": "^40.0.0",
+    "typescript-eslint": "^8.59.0",
+    "vite-plugin-solid": "^2.11.12"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.3",
+    "publint": "^0.3.18"
+  }
+}

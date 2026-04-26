@@ -1,0 +1,2 @@
+hook_dir="$(dirname "$0")"
+. "$hook_dir/../husky/pre-commit.sh"
