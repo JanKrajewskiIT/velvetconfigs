@@ -166,3 +166,93 @@ export function createSolidAppViteConfig(
     },
   };
 }
+
+function buildExternalMatcher(externalPackages) {
+  if (!externalPackages || externalPackages.length === 0) {
+    return (id) => id.includes('node_modules');
+  }
+  const escaped = externalPackages.map((name) => name.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'));
+  const pattern = new RegExp(`^(${escaped.join('|')})(/|$)`, 'u');
+  return (id) => id.includes('node_modules') || pattern.test(id);
+}
+
+/**
+ * Lazy-loads vite-plugin-dts so projects that don't need types emission
+ * (or don't install the optional peer) won't crash at import time.
+ */
+async function loadDtsPlugin(dtsOptions) {
+  if (dtsOptions === false) {
+    return null;
+  }
+  const mod = await import('vite-plugin-dts');
+  const dts = mod.default ?? mod;
+  return dts({
+    insertTypesEntry: true,
+    ...(dtsOptions ?? {}),
+  });
+}
+
+/**
+ * Vite preset for Solid component libraries (lib mode).
+ *
+ * Defaults:
+ *  - alias `~` -> srcDir
+ *  - lib entry: src/index.ts, ESM only, fileName from `fileName` option
+ *  - preserveModules: true (tree-shakable per-file output)
+ *  - cssCodeSplit: false (single CSS bundle)
+ *  - vite-plugin-dts (insertTypesEntry: true) — pass `dts: false` to disable
+ *  - external: matches `node_modules` plus packages listed in `externalPackages`
+ */
+export async function createSolidLibViteConfig(
+  userConfig = {},
+  {
+    alias = '~',
+    srcDir = 'src',
+    entry = 'src/index.ts',
+    fileName,
+    formats = ['es'],
+    externalPackages = [],
+    preserveModules = true,
+    preserveModulesRoot = 'src',
+    cssCodeSplit = false,
+    dts: dtsOptions = undefined,
+    solidPluginOptions = undefined,
+  } = {},
+) {
+  if (!fileName) {
+    throw new Error('createSolidLibViteConfig: `fileName` is required (e.g. "my-lib").');
+  }
+
+  const cwd = process.cwd();
+  const dtsPlugin = await loadDtsPlugin(dtsOptions);
+
+  const baseConfig = {
+    plugins: [solid(solidPluginOptions), ...(dtsPlugin ? [dtsPlugin] : [])],
+    resolve: alias
+      ? {
+          alias: {
+            [alias]: resolve(cwd, srcDir),
+          },
+        }
+      : undefined,
+    build: {
+      lib: {
+        entry: resolve(cwd, entry),
+        fileName,
+        formats,
+      },
+      rollupOptions: {
+        external: buildExternalMatcher(externalPackages),
+        output: {
+          preserveModules,
+          preserveModulesRoot,
+          entryFileNames: (chunkInfo) =>
+            `${chunkInfo.name.replace(new RegExp(`^${preserveModulesRoot}[\\\\/]`, 'u'), '')}.js`,
+        },
+      },
+      cssCodeSplit,
+    },
+  };
+
+  return mergeConfig(baseConfig, userConfig);
+}

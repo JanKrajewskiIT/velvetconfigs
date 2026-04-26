@@ -21,19 +21,19 @@ Install the relevant peer dependencies on demand (eslint, prettier, stylelint, t
 
 ## Subpath exports
 
-| Export                                       | Purpose                                               |
-| -------------------------------------------- | ----------------------------------------------------- |
-| `@jankrajewskiit/configs/eslint`             | Flat-config factory for SolidJS + TypeScript projects |
-| `@jankrajewskiit/configs/prettier`           | Prettier preset (JSON)                                |
-| `@jankrajewskiit/configs/stylelint`          | Stylelint preset (JSON)                               |
-| `@jankrajewskiit/configs/tsconfig/app`       | TS config for browser app code                        |
-| `@jankrajewskiit/configs/tsconfig/node`      | TS config for node-side code                          |
-| `@jankrajewskiit/configs/tsconfig/app-vite`  | `app` + `vite/client` types                           |
-| `@jankrajewskiit/configs/tsconfig/node-vite` | `node` + `node` types                                 |
-| `@jankrajewskiit/configs/vite`               | `createSolidAppViteConfig` factory                    |
-| `@jankrajewskiit/configs/lint-staged`        | `createLintStagedConfig` factory + default            |
-| `@jankrajewskiit/configs/husky/pre-commit`   | Pre-commit hook script                                |
-| `@jankrajewskiit/configs/nginx/spa`          | Nginx SPA config                                      |
+| Export                                       | Purpose                                                                      |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| `@jankrajewskiit/configs/eslint`             | Flat-config factory for SolidJS + TypeScript projects                        |
+| `@jankrajewskiit/configs/prettier`           | Prettier preset (JSON)                                                       |
+| `@jankrajewskiit/configs/stylelint`          | Stylelint preset (JSON)                                                      |
+| `@jankrajewskiit/configs/tsconfig/app`       | TS config for browser app code                                               |
+| `@jankrajewskiit/configs/tsconfig/node`      | TS config for node-side code                                                 |
+| `@jankrajewskiit/configs/tsconfig/app-vite`  | `app` + `vite/client` types                                                  |
+| `@jankrajewskiit/configs/tsconfig/node-vite` | `node` + `node` types                                                        |
+| `@jankrajewskiit/configs/vite`               | `createSolidAppViteConfig` (apps) and `createSolidLibViteConfig` (libraries) |
+| `@jankrajewskiit/configs/lint-staged`        | `createLintStagedConfig` factory + default                                   |
+| `@jankrajewskiit/configs/husky/pre-commit`   | Pre-commit hook script                                                       |
+| `@jankrajewskiit/configs/nginx/spa`          | Nginx SPA config                                                             |
 
 ## Usage examples
 
@@ -66,7 +66,7 @@ export default createEslintConfig({
 { "extends": "@jankrajewskiit/configs/tsconfig/app-vite" }
 ```
 
-### Vite (`vite.config.ts`)
+### Vite — application (`vite.config.ts`)
 
 ```ts
 import { defineConfig, loadEnv } from 'vite';
@@ -82,6 +82,25 @@ export default defineConfig(({ mode }) =>
   ),
 );
 ```
+
+### Vite — library (`vite.config.ts`)
+
+```ts
+import { defineConfig } from 'vite';
+import { createSolidLibViteConfig } from '@jankrajewskiit/configs/vite';
+
+export default defineConfig(async () =>
+  createSolidLibViteConfig(
+    {},
+    {
+      fileName: 'my-lib',
+      externalPackages: ['solid-js', '@solidjs/router', 'solid-icons'],
+    },
+  ),
+);
+```
+
+Defaults: `entry: 'src/index.ts'`, ESM only, `preserveModules: true`, single CSS bundle, `vite-plugin-dts` enabled.
 
 ### lint-staged (`lint-staged.config.mjs`)
 

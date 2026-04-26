@@ -1,5 +1,5 @@
 import type { Options as SolidPluginOptions } from 'vite-plugin-solid';
-import type { DepOptimizationOptions, UserConfig } from 'vite';
+import type { DepOptimizationOptions, UserConfig, LibraryFormats } from 'vite';
 
 export interface ApiProxyOptions {
   enabled?: boolean;
@@ -31,9 +31,31 @@ export interface CreateSolidAppViteConfigOptions {
   linkedWorkspace?: LinkedWorkspaceOptions;
 }
 
+export interface CreateSolidLibViteConfigOptions {
+  alias?: string | null;
+  srcDir?: string;
+  entry?: string;
+  /** Required. e.g. "velvet-ui" -> dist/velvet-ui.js */
+  fileName: string;
+  formats?: LibraryFormats[];
+  /** Package names to externalize (matched as `^name(/|$)`). Always also externalizes node_modules. */
+  externalPackages?: string[];
+  preserveModules?: boolean;
+  preserveModulesRoot?: string;
+  cssCodeSplit?: boolean;
+  /** Pass `false` to disable vite-plugin-dts. Otherwise forwarded to dts(). */
+  dts?: false | Record<string, unknown>;
+  solidPluginOptions?: Partial<SolidPluginOptions>;
+}
+
 export declare const solidMarkdownOptimizeDeps: DepOptimizationOptions;
 
 export declare function createSolidAppViteConfig(
   userConfig?: UserConfig,
   options?: CreateSolidAppViteConfigOptions,
 ): UserConfig;
+
+export declare function createSolidLibViteConfig(
+  userConfig?: UserConfig,
+  options?: CreateSolidLibViteConfigOptions,
+): Promise<UserConfig>;
