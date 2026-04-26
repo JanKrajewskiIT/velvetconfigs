@@ -6,7 +6,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JanKrajewskiIT/velvet-configs.git"
+    "url": "git+https://github.com/jankrajewskiit/velvet-configs.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "exports": {
     "./eslint": "./eslint/index.mjs",
