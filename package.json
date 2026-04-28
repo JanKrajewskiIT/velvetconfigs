@@ -1,7 +1,7 @@
 {
   "name": "@jankrajewskiit/configs",
   "version": "1.1.5",
-  "description": "Shared tooling configs (eslint, prettier, stylelint, tsconfig, vite, lint-staged, husky, nginx) used by VelvetUi and consumer apps.",
+  "description": "Shared tooling configs (eslint, prettier, stylelint, tsconfig, vite, lint-staged, husky, nginx) for SolidJS apps and libraries.",
   "type": "module",
   "license": "MIT",
   "repository": {

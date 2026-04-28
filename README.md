@@ -1,6 +1,6 @@
 # @jankrajewskiit/configs
 
-Shared tooling configuration extracted from [VelvetUi](https://github.com/JanKrajewskiIT/velvet). It provides reusable presets for ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky, and Nginx.
+Shared tooling configuration for SolidJS apps and libraries. It provides reusable presets for ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky, and Nginx.
 
 ## Install
 

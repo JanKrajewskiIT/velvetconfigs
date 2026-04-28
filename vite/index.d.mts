@@ -51,7 +51,7 @@ export interface CreateSolidLibViteConfigOptions {
   alias?: string | null;
   srcDir?: string;
   entry?: string;
-  /** Required. e.g. "velvet-ui" -> dist/velvet-ui.js */
+  /** Required. e.g. "my-lib" -> dist/my-lib.js */
   fileName: string;
   formats?: LibraryFormats[];
   /** Package names to externalize (matched as `^name(/|$)`). Always also externalizes node_modules. */
