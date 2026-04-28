@@ -19,6 +19,8 @@
     "./tsconfig/node": "./tsconfig/node.json",
     "./tsconfig/app-vite": "./tsconfig/app-vite.json",
     "./tsconfig/node-vite": "./tsconfig/node-vite.json",
+    "./tsconfig/lib": "./tsconfig/lib.json",
+    "./tsconfig/test": "./tsconfig/test.json",
     "./vite": {
       "types": "./vite/index.d.mts",
       "import": "./vite/index.mjs"
@@ -42,8 +44,24 @@
     "README.md",
     "LICENSE"
   ],
+  "keywords": [
+    "config",
+    "configs",
+    "preset",
+    "eslint-config",
+    "prettier-config",
+    "stylelint-config",
+    "tsconfig",
+    "vite",
+    "vite-config",
+    "solidjs",
+    "solid",
+    "lint-staged",
+    "husky",
+    "nginx"
+  ],
   "engines": {
-    "node": ">=20"
+    "node": ">=25"
   },
   "scripts": {
     "format": "prettier --write .",
@@ -52,6 +70,7 @@
     "prepublishOnly": "npm run verify",
     "prepare": "husky"
   },
+  "prettier": "./prettier/index.json",
   "peerDependencies": {
     "eslint": ">=9",
     "lint-staged": ">=16",

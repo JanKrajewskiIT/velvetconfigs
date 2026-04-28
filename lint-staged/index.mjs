@@ -1,6 +1,6 @@
 export function createLintStagedConfig({
-  eslintTarget = '*.{ts,tsx}',
-  prettierTarget = '*.{json,md}',
+  eslintTarget = '*.{js,jsx,ts,tsx,mjs,cjs}',
+  prettierTarget = '*.{json,md,yml,yaml,html}',
   stylelintTarget = '*.css',
 } = {}) {
   return {

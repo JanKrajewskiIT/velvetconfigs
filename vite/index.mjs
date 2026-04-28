@@ -1,48 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { mergeConfig } from 'vite';
 import solid from 'vite-plugin-solid';
-
-export const solidMarkdownOptimizeDeps = {
-  exclude: ['solid-markdown'],
-  include: [
-    'remark-gfm',
-    'solid-markdown > extend',
-    'solid-markdown > style-to-object',
-    'solid-markdown > inline-style-parser',
-    'solid-markdown > debug',
-    'solid-markdown > ms',
-  ],
-  extensions: ['.jsx'],
-};
-
-const linkedWorkspaceDedupe = [
-  'solid-js',
-  '@solidjs/router',
-  'debug',
-  'ms',
-  'extend',
-  'unified',
-  'remark-parse',
-  'remark-rehype',
-  'vfile',
-  'micromark',
-  'mdast-util-from-markdown',
-];
-
-const linkedWorkspaceOptimizeDeps = {
-  exclude: ['@jankrajewskiit/ui', 'oidc-client-ts'],
-  include: [
-    'extend',
-    'unified',
-    'remark-parse',
-    'remark-rehype',
-    'vfile',
-    'micromark',
-    'mdast-util-from-markdown',
-    'debug',
-    'ms',
-  ],
-};
 
 function unique(items = []) {
   return [...new Set(items)];
@@ -62,15 +21,21 @@ function resolveApiProxyOptions(apiProxy) {
   const target = apiProxy.target?.trim() || envTarget || apiProxy.fallbackTarget || 'http://localhost:5000';
   const proxyPath = apiProxy.path ?? '/api';
 
+  let rewrite;
+  if (typeof apiProxy.rewrite === 'function') {
+    rewrite = apiProxy.rewrite;
+  } else if (apiProxy.rewrite === false) {
+    rewrite = undefined;
+  } else {
+    rewrite = (requestPath) => requestPath.replace(new RegExp(`^${proxyPath}`, 'u'), '');
+  }
+
   return {
     [proxyPath]: {
       target,
       changeOrigin: apiProxy.changeOrigin ?? true,
       secure: apiProxy.secure ?? false,
-      rewrite:
-        apiProxy.rewrite === false
-          ? undefined
-          : (requestPath) => requestPath.replace(new RegExp(`^${proxyPath}`, 'u'), ''),
+      rewrite,
     },
   };
 }
@@ -80,18 +45,26 @@ function resolveLinkedWorkspaceConfig(linkedWorkspace) {
     return undefined;
   }
 
-  const workspacePath = linkedWorkspace.workspacePath ?? '../../VelvetUi';
+  const { workspacePath, packageName } = linkedWorkspace;
+  if (!workspacePath) {
+    throw new Error('linkedWorkspace.enabled requires `workspacePath`.');
+  }
+  if (!packageName) {
+    throw new Error('linkedWorkspace.enabled requires `packageName` (e.g. "@scope/ui").');
+  }
 
-  const ciNodeModules = resolve(workspacePath, 'node_modules');
+  const workspaceNodeModules = resolve(workspacePath, 'node_modules');
+  const localNodeModules = resolve('./node_modules');
 
-  const alias = {
-    [`${ciNodeModules}/lightweight-charts/dist/lightweight-charts.production.mjs`]: resolve(
-      './node_modules/lightweight-charts/dist/lightweight-charts.production.mjs',
-    ),
-    [`${ciNodeModules}/oidc-client-ts/dist/esm/oidc-client-ts.js`]: resolve(
-      './node_modules/oidc-client-ts/dist/esm/oidc-client-ts.js',
-    ),
-  };
+  // Optional file-level aliases for ESM/CJS edge-cases:
+  // [{ from: 'pkg/path.js' }, ...]
+  const fileAliases = linkedWorkspace.fileAliases ?? [];
+  const alias = {};
+  for (const entry of fileAliases) {
+    const rel = typeof entry === 'string' ? entry : entry.from;
+    const localPath = entry.local ?? `${localNodeModules}/${rel}`;
+    alias[`${workspaceNodeModules}/${rel}`] = resolve(localPath);
+  }
 
   return {
     server: {
@@ -101,11 +74,11 @@ function resolveLinkedWorkspaceConfig(linkedWorkspace) {
     },
     resolve: {
       alias,
-      dedupe: linkedWorkspace.dedupe ?? linkedWorkspaceDedupe,
+      dedupe: linkedWorkspace.dedupe ?? [],
     },
     optimizeDeps: {
-      exclude: linkedWorkspace.optimizeDepsExclude ?? linkedWorkspaceOptimizeDeps.exclude,
-      include: linkedWorkspace.optimizeDepsInclude ?? linkedWorkspaceOptimizeDeps.include,
+      exclude: linkedWorkspace.optimizeDepsExclude ?? [packageName],
+      include: linkedWorkspace.optimizeDepsInclude ?? [],
     },
   };
 }
@@ -115,8 +88,8 @@ export function createSolidAppViteConfig(
   {
     alias = '~',
     srcDir = 'src',
-    port = null,
-    includeSolidMarkdownDeps = true,
+    port = undefined,
+    host = undefined,
     solidPluginOptions = undefined,
     apiProxy = undefined,
     linkedWorkspace = undefined,
@@ -125,7 +98,10 @@ export function createSolidAppViteConfig(
   const resolvedApiProxy = resolveApiProxyOptions(apiProxy);
   const resolvedLinkedWorkspace = resolveLinkedWorkspaceConfig(linkedWorkspace);
 
-  const defaultOptimizeDeps = includeSolidMarkdownDeps ? solidMarkdownOptimizeDeps : undefined;
+  const serverConfig = {};
+  if (port != null) serverConfig.port = port;
+  if (host != null) serverConfig.host = host;
+  if (resolvedApiProxy) serverConfig.proxy = resolvedApiProxy;
 
   const baseConfig = {
     plugins: [solid(solidPluginOptions)],
@@ -136,12 +112,8 @@ export function createSolidAppViteConfig(
           },
         }
       : undefined,
-    optimizeDeps: defaultOptimizeDeps,
-    server: {
-      ...(port ? { port } : {}),
-      ...(resolvedApiProxy ? { proxy: resolvedApiProxy } : {}),
-    },
-    preview: port ? { port } : undefined,
+    server: Object.keys(serverConfig).length ? serverConfig : undefined,
+    preview: port != null ? { port } : undefined,
   };
 
   const mergedWithLinkedWorkspace = resolvedLinkedWorkspace
@@ -149,22 +121,22 @@ export function createSolidAppViteConfig(
     : baseConfig;
   const mergedWithUserConfig = mergeConfig(mergedWithLinkedWorkspace, userConfig);
 
-  if (!mergedWithUserConfig.optimizeDeps) {
-    return mergedWithUserConfig;
-  }
-
-  return {
-    ...mergedWithUserConfig,
-    optimizeDeps: {
+  // De-duplicate after merges.
+  if (mergedWithUserConfig.optimizeDeps) {
+    mergedWithUserConfig.optimizeDeps = {
       ...mergedWithUserConfig.optimizeDeps,
       include: uniqueMaybe(mergedWithUserConfig.optimizeDeps.include),
       exclude: uniqueMaybe(mergedWithUserConfig.optimizeDeps.exclude),
-    },
-    resolve: {
+    };
+  }
+  if (mergedWithUserConfig.resolve?.dedupe) {
+    mergedWithUserConfig.resolve = {
       ...mergedWithUserConfig.resolve,
-      dedupe: uniqueMaybe(mergedWithUserConfig.resolve?.dedupe),
-    },
-  };
+      dedupe: uniqueMaybe(mergedWithUserConfig.resolve.dedupe),
+    };
+  }
+
+  return mergedWithUserConfig;
 }
 
 function buildExternalMatcher(externalPackages) {
@@ -174,6 +146,19 @@ function buildExternalMatcher(externalPackages) {
   const escaped = externalPackages.map((name) => name.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'));
   const pattern = new RegExp(`^(${escaped.join('|')})(/|$)`, 'u');
   return (id) => id.includes('node_modules') || pattern.test(id);
+}
+
+/**
+ * Read peerDependencies + dependencies from a package.json so library builds
+ * can externalize them without having to repeat the list in vite.config.ts.
+ */
+export function readPeerDependencies(packageJsonPath = resolve(process.cwd(), 'package.json')) {
+  try {
+    const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+    return Object.keys({ ...pkg.peerDependencies, ...pkg.dependencies });
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -202,6 +187,8 @@ async function loadDtsPlugin(dtsOptions) {
  *  - cssCodeSplit: false (single CSS bundle)
  *  - vite-plugin-dts (insertTypesEntry: true) — pass `dts: false` to disable
  *  - external: matches `node_modules` plus packages listed in `externalPackages`
+ *    (use `externalizeFromPackageJson: true` to auto-include peer/regular deps)
+ *  - build.target: 'esnext'
  */
 export async function createSolidLibViteConfig(
   userConfig = {},
@@ -212,9 +199,11 @@ export async function createSolidLibViteConfig(
     fileName,
     formats = ['es'],
     externalPackages = [],
+    externalizeFromPackageJson = false,
     preserveModules = true,
     preserveModulesRoot = 'src',
     cssCodeSplit = false,
+    target = 'esnext',
     dts: dtsOptions = undefined,
     solidPluginOptions = undefined,
   } = {},
@@ -226,6 +215,10 @@ export async function createSolidLibViteConfig(
   const cwd = process.cwd();
   const dtsPlugin = await loadDtsPlugin(dtsOptions);
 
+  const mergedExternals = externalizeFromPackageJson
+    ? unique([...readPeerDependencies(), ...externalPackages])
+    : externalPackages;
+
   const baseConfig = {
     plugins: [solid(solidPluginOptions), ...(dtsPlugin ? [dtsPlugin] : [])],
     resolve: alias
@@ -236,13 +229,14 @@ export async function createSolidLibViteConfig(
         }
       : undefined,
     build: {
+      target,
       lib: {
         entry: resolve(cwd, entry),
         fileName,
         formats,
       },
       rollupOptions: {
-        external: buildExternalMatcher(externalPackages),
+        external: buildExternalMatcher(mergedExternals),
         output: {
           preserveModules,
           preserveModulesRoot,

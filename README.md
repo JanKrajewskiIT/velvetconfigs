@@ -1,6 +1,6 @@
 # @jankrajewskiit/configs
 
-Shared tooling configuration extracted from [VelvetUi](https://github.com/JanKrajewskiIT/velvet). Provides reusable presets for ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky and Nginx.
+Shared tooling configuration extracted from [VelvetUi](https://github.com/JanKrajewskiIT/velvet). It provides reusable presets for ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky, and Nginx.
 
 ## Install
 
@@ -17,34 +17,78 @@ Then:
 npm install --save-dev @jankrajewskiit/configs
 ```
 
-Install the relevant peer dependencies on demand (eslint, prettier, stylelint, typescript, vite, lint-staged) — only the ones you actually use.
+Install only the peer dependencies you use (`eslint`, `prettier`, `stylelint`, `typescript`, `vite`, `lint-staged`).
 
 ## Subpath exports
 
-| Export                                       | Purpose                                                                      |
-| -------------------------------------------- | ---------------------------------------------------------------------------- |
-| `@jankrajewskiit/configs/eslint`             | Flat-config factory for SolidJS + TypeScript projects                        |
-| `@jankrajewskiit/configs/prettier`           | Prettier preset (JSON)                                                       |
-| `@jankrajewskiit/configs/stylelint`          | Stylelint preset (JSON)                                                      |
-| `@jankrajewskiit/configs/tsconfig/app`       | TS config for browser app code                                               |
-| `@jankrajewskiit/configs/tsconfig/node`      | TS config for node-side code                                                 |
-| `@jankrajewskiit/configs/tsconfig/app-vite`  | `app` + `vite/client` types                                                  |
-| `@jankrajewskiit/configs/tsconfig/node-vite` | `node` + `node` types                                                        |
-| `@jankrajewskiit/configs/vite`               | `createSolidAppViteConfig` (apps) and `createSolidLibViteConfig` (libraries) |
-| `@jankrajewskiit/configs/lint-staged`        | `createLintStagedConfig` factory + default                                   |
-| `@jankrajewskiit/configs/husky/pre-commit`   | Pre-commit hook script                                                       |
-| `@jankrajewskiit/configs/nginx/spa`          | Nginx SPA config                                                             |
+| Export                                       | Purpose                                                                                                                                                                                                                     |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@jankrajewskiit/configs/eslint`             | `createEslintConfig` (Solid/browser), `createNodeEslintConfig` (Node), plus `buildNoChildrenPropSelectors` and `buildLiteralI18nKeySelectors` helpers                                                                       |
+| `@jankrajewskiit/configs/prettier`           | Prettier preset (JSON)                                                                                                                                                                                                      |
+| `@jankrajewskiit/configs/stylelint`          | Stylelint preset (JSON)                                                                                                                                                                                                     |
+| `@jankrajewskiit/configs/tsconfig/app`       | TS config for browser app code                                                                                                                                                                                              |
+| `@jankrajewskiit/configs/tsconfig/node`      | TS config for node-side code                                                                                                                                                                                                |
+| `@jankrajewskiit/configs/tsconfig/app-vite`  | `app` + `vite/client` types                                                                                                                                                                                                 |
+| `@jankrajewskiit/configs/tsconfig/node-vite` | `node` + `node` types                                                                                                                                                                                                       |
+| `@jankrajewskiit/configs/tsconfig/lib`       | `app` + declaration emit. Use when **`tsc` emits `.d.ts`** (e.g. `tsc -b && vite build` with no `vite-plugin-dts`). If `vite-plugin-dts` already emits types for you, use `tsconfig/app` with `declaration: false` instead. |
+| `@jankrajewskiit/configs/tsconfig/test`      | `app` + Vitest / Testing Library types                                                                                                                                                                                      |
+| `@jankrajewskiit/configs/vite`               | `createSolidAppViteConfig` (apps) and `createSolidLibViteConfig` (libraries)                                                                                                                                                |
+| `@jankrajewskiit/configs/lint-staged`        | `createLintStagedConfig` factory + default                                                                                                                                                                                  |
+| `@jankrajewskiit/configs/husky/pre-commit`   | Pre-commit hook script                                                                                                                                                                                                      |
+| `@jankrajewskiit/configs/nginx/spa`          | Nginx SPA config                                                                                                                                                                                                            |
 
 ## Usage examples
 
 ### ESLint (`eslint.config.mjs`)
+
+For Solid/browser apps:
 
 ```js
 import { createEslintConfig } from '@jankrajewskiit/configs/eslint';
 
 export default createEslintConfig({
   tsconfigRootDir: import.meta.dirname,
-  ignorePaths: ['dist'],
+  ignorePaths: ['storybook-static'],
+  environments: ['browser'], // 'node' | 'worker' | 'serviceworker' | 'jest' | 'vitest'
+});
+```
+
+For Node-side projects (CLI, scripts, server) - same baseline minus Solid, `jsx-a11y`, and `css-modules`:
+
+```js
+import { createNodeEslintConfig } from '@jankrajewskiit/configs/eslint';
+
+export default createNodeEslintConfig({
+  tsconfigRootDir: import.meta.dirname,
+});
+```
+
+Add project-specific selectors via `extraConfigs`:
+
+```js
+import {
+  buildLiteralI18nKeySelectors,
+  buildNoChildrenPropSelectors,
+  createEslintConfig,
+} from '@jankrajewskiit/configs/eslint';
+
+export default createEslintConfig({
+  tsconfigRootDir: import.meta.dirname,
+  extraConfigs: [
+    {
+      files: ['src/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          ...buildNoChildrenPropSelectors([
+            { component: 'DialogTitle', prop: 'label' },
+            { component: 'IconButton', prop: 'label', forbid: 'title' },
+          ]),
+          ...buildLiteralI18nKeySelectors(),
+        ],
+      },
+    },
+  ],
 });
 ```
 
@@ -94,13 +138,16 @@ export default defineConfig(async () =>
     {},
     {
       fileName: 'my-lib',
+      // Either list packages explicitly...
       externalPackages: ['solid-js', '@solidjs/router', 'solid-icons'],
+      // ...or auto-externalize everything from peerDependencies + dependencies:
+      externalizeFromPackageJson: true,
     },
   ),
 );
 ```
 
-Defaults: `entry: 'src/index.ts'`, ESM only, `preserveModules: true`, single CSS bundle, `vite-plugin-dts` enabled.
+Defaults: `entry: 'src/index.ts'`, ESM-only output, `preserveModules: true`, single CSS bundle, `target: 'esnext'`, `vite-plugin-dts` enabled.
 
 ### lint-staged (`lint-staged.config.mjs`)
 
