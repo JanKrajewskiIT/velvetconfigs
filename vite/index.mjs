@@ -56,8 +56,6 @@ function resolveLinkedWorkspaceConfig(linkedWorkspace) {
   const workspaceNodeModules = resolve(workspacePath, 'node_modules');
   const localNodeModules = resolve('./node_modules');
 
-  // Optional file-level aliases for ESM/CJS edge-cases:
-  // [{ from: 'pkg/path.js' }, ...]
   const fileAliases = linkedWorkspace.fileAliases ?? [];
   const alias = {};
   for (const entry of fileAliases) {
@@ -121,7 +119,6 @@ export function createSolidAppViteConfig(
     : baseConfig;
   const mergedWithUserConfig = mergeConfig(mergedWithLinkedWorkspace, userConfig);
 
-  // De-duplicate after merges.
   if (mergedWithUserConfig.optimizeDeps) {
     mergedWithUserConfig.optimizeDeps = {
       ...mergedWithUserConfig.optimizeDeps,
@@ -148,10 +145,6 @@ function buildExternalMatcher(externalPackages) {
   return (id) => id.includes('node_modules') || pattern.test(id);
 }
 
-/**
- * Read peerDependencies + dependencies from a package.json so library builds
- * can externalize them without having to repeat the list in vite.config.ts.
- */
 export function readPeerDependencies(packageJsonPath = resolve(process.cwd(), 'package.json')) {
   try {
     const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
@@ -161,10 +154,6 @@ export function readPeerDependencies(packageJsonPath = resolve(process.cwd(), 'p
   }
 }
 
-/**
- * Lazy-loads vite-plugin-dts so projects that don't need types emission
- * (or don't install the optional peer) won't crash at import time.
- */
 async function loadDtsPlugin(dtsOptions) {
   if (dtsOptions === false) {
     return null;
@@ -177,19 +166,6 @@ async function loadDtsPlugin(dtsOptions) {
   });
 }
 
-/**
- * Vite preset for Solid component libraries (lib mode).
- *
- * Defaults:
- *  - alias `~` -> srcDir
- *  - lib entry: src/index.ts, ESM only, fileName from `fileName` option
- *  - preserveModules: true (tree-shakable per-file output)
- *  - cssCodeSplit: false (single CSS bundle)
- *  - vite-plugin-dts (insertTypesEntry: true) — pass `dts: false` to disable
- *  - external: matches `node_modules` plus packages listed in `externalPackages`
- *    (use `externalizeFromPackageJson: true` to auto-include peer/regular deps)
- *  - build.target: 'esnext'
- */
 export async function createSolidLibViteConfig(
   userConfig = {},
   {

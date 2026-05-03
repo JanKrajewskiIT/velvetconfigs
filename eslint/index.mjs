@@ -25,7 +25,7 @@ const ENVIRONMENT_GLOBALS = {
   worker: globals.worker,
   serviceworker: globals.serviceworker,
   jest: globals.jest,
-  vitest: globals.vitest ?? {},
+  vitest: globals.vitest,
 };
 
 function resolveEnvironmentGlobals(environments) {
@@ -76,18 +76,6 @@ const COMMON_PLUGINS = {
   'simple-import-sort': simpleImportSortPlugin,
 };
 
-/**
- * Generic ESLint flat-config factory for SolidJS + TypeScript projects.
- *
- * @param {object} options
- * @param {string} options.tsconfigRootDir              - Root dir for projectService.
- * @param {string[]} [options.ignorePaths=[]]           - Extra ignore globs (merged with defaults).
- * @param {string[]} [options.environments=['browser']] - 'browser' | 'node' | 'worker' | 'serviceworker' | 'jest' | 'vitest'
- * @param {string[]} [options.typedFiles]               - Files that get type-aware linting (default: src/**).
- * @param {string[]} [options.testFiles]                - Files treated as tests (relaxed rules).
- * @param {boolean}  [options.allowConsoleWarnError=true] - Allow `console.warn` / `console.error`.
- * @param {Array}    [options.extraConfigs=[]]          - Extra flat-config entries appended at the end.
- */
 export function createEslintConfig({
   tsconfigRootDir,
   ignorePaths = [],
@@ -113,7 +101,6 @@ export function createEslintConfig({
 
     globalIgnores([...DEFAULT_IGNORES, ...ignorePaths]),
 
-    // Non-typed config files: lint with basic rules only, no projectService.
     {
       files: ['**/*.{mjs,cjs,mts,cts}', '*.config.{js,ts,mjs,cjs}'],
       languageOptions: {
@@ -122,7 +109,6 @@ export function createEslintConfig({
       ...tseslint.configs.disableTypeChecked,
     },
 
-    // Typed config: src/**.
     {
       files: typedFiles,
       languageOptions: {
@@ -145,7 +131,6 @@ export function createEslintConfig({
       },
     },
 
-    // Test files override: relax some strict rules.
     {
       files: testFiles,
       rules: COMMON_TEST_RULES,
@@ -155,22 +140,6 @@ export function createEslintConfig({
   ]);
 }
 
-/**
- * Generic ESLint flat-config factory for Node-side TypeScript projects
- * (CLI tools, build scripts, server code without JSX/CSS Modules).
- *
- * Same baseline as `createEslintConfig` but skips the SolidJS, jsx-a11y and
- * css-modules plugins — keeps `typescript-eslint`, `unused-imports`,
- * `simple-import-sort`, and `prettier` integration.
- *
- * @param {object} options
- * @param {string} options.tsconfigRootDir
- * @param {string[]} [options.ignorePaths=[]]
- * @param {string[]} [options.typedFiles=['src/**\/*.{ts,js}']]
- * @param {string[]} [options.testFiles]
- * @param {boolean}  [options.allowConsoleWarnError=true]
- * @param {Array}    [options.extraConfigs=[]]
- */
 export function createNodeEslintConfig({
   tsconfigRootDir,
   ignorePaths = [],
@@ -192,7 +161,6 @@ export function createNodeEslintConfig({
 
     globalIgnores([...DEFAULT_IGNORES, ...ignorePaths]),
 
-    // Non-typed config files: lint with basic rules only, no projectService.
     {
       files: ['**/*.{mjs,cjs,mts,cts}', '*.config.{js,ts,mjs,cjs}'],
       languageOptions: {
@@ -201,7 +169,6 @@ export function createNodeEslintConfig({
       ...tseslint.configs.disableTypeChecked,
     },
 
-    // Typed config: src/**.
     {
       files: typedFiles,
       languageOptions: {
@@ -218,7 +185,6 @@ export function createNodeEslintConfig({
       },
     },
 
-    // Test files override.
     {
       files: testFiles,
       rules: COMMON_TEST_RULES,
@@ -228,20 +194,10 @@ export function createNodeEslintConfig({
   ]);
 }
 
-/**
- * Build a `no-restricted-syntax` rule entry that forbids passing JSX children
- * (or a `title` attribute) to components that should expose a dedicated prop.
- *
- * Each entry can be:
- *  - `{ component, prop }`                                 — forbids `<Comp>...</Comp>` (default)
- *  - `{ component, prop, forbid: 'title' }`                — forbids `title="..."` attribute
- *  - `{ component, prop, forbid: ['children', 'title'] }`  — both
- */
 export function buildNoChildrenPropRule(entries) {
   return ['error', ...buildNoChildrenPropSelectors(entries)];
 }
 
-/** Selector list (without the 'error' severity) — for merging with other selectors. */
 export function buildNoChildrenPropSelectors(entries) {
   const selectors = [];
   for (const entry of entries) {
@@ -262,11 +218,6 @@ export function buildNoChildrenPropSelectors(entries) {
   return selectors;
 }
 
-/**
- * Selectors that disallow calling `t()` with a literal/static i18n key,
- * forcing callers to use `ts()` (typed-static) instead. Keep `t()` for
- * dynamic keys only.
- */
 export function buildLiteralI18nKeySelectors({ dynamicFnName = 't', staticFnName = 'ts' } = {}) {
   return [
     {
