@@ -34,5 +34,5 @@ The repository MUST NOT add Dependabot-only verification steps. The same `verify
 ## Step 5 — Out of scope
 
 - Dependabot does not version-bump the package itself. Spec 13 (manual `npm version`) remains the only release path.
-- Dependabot does not edit `package-lock.json` independently of `package.json`. Lockfile-only refreshes are handled by Spec 20 (manual `ncu`/refresh) so that the maintainer reviews the diff intentionally.
+- Dependabot does not edit `package-lock.json` independently of `package.json`. Lockfile-only refreshes are handled by Spec 19 (manual `ncu`/refresh, Steps 8+) so that the maintainer reviews the diff intentionally.
 - Dependabot does not update the Node version pin (`engines.node`, workflow `node-version`, `.nvmrc`). Node major bumps are an architectural decision per Spec 13 and Spec 17.

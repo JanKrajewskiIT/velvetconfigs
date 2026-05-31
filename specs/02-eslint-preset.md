@@ -4,6 +4,8 @@
 
 Create `eslint/index.mjs` exporting two factory functions and two selector-builder helpers. Factories return ESLint flat-config arrays produced via `defineConfig` from `eslint/config`. Static objects are not exported — every consumer must pass at minimum its TypeScript project root so the typed-rules layer can run.
 
+A sibling `eslint/index.d.mts` declares the public type surface (Step 11). The two files form one logical preset; the runtime artifact is the `.mjs`, the type artifact is the `.d.mts`.
+
 Exports:
 
 - `createEslintConfig` — Solid/browser baseline.
@@ -87,3 +89,73 @@ The README must document at minimum:
 - The `tsconfigRootDir` requirement.
 - The `environments` option and its allowed tokens.
 - An example of extending rules via `extraConfigs` together with the selector-builder helpers.
+
+## Step 11 — TypeScript declarations
+
+The Vite and lint-staged presets ship `.d.mts` files alongside their `.mjs` factories (Specs 06–08). The ESLint preset MUST do the same. Consumers importing `createEslintConfig`, `createNodeEslintConfig`, `buildNoChildrenPropRule`, or `buildLiteralI18nKeyRule` from `@jankrajewskiit/configs/eslint` MUST receive precise types — never `any`.
+
+The public surface declared in `eslint/index.d.mts`:
+
+- `createEslintConfig(options: CreateEslintConfigOptions): FlatConfig[]`
+- `createNodeEslintConfig(options: CreateNodeEslintConfigOptions): FlatConfig[]`
+- `buildNoChildrenPropSelectors(entries: readonly NoChildrenPropEntry[]): RestrictedSyntaxSelector[]`
+- `buildNoChildrenPropRule(entries: readonly NoChildrenPropEntry[]): RestrictedSyntaxRule`
+- `buildLiteralI18nKeySelectors(options?: LiteralI18nKeyOptions): RestrictedSyntaxSelector[]`
+- `buildLiteralI18nKeyRule(options?: LiteralI18nKeyOptions): RestrictedSyntaxRule`
+
+The `FlatConfig` type aliases `eslint`'s `Linter.Config`. The preset MUST NOT redefine ESLint's config shape; it re-exports the upstream type to avoid drift across ESLint majors.
+
+## Step 12 — Options interfaces
+
+`CreateEslintConfigOptions` MUST declare:
+
+- `tsconfigRootDir: string` — required at the type level (the runtime factory throws when it is missing, per Step 8).
+- `typedFiles?: readonly string[]` — typed-source glob; defaults to `src/**/*.{ts,tsx,js,jsx}` (Step 2).
+- `testFiles?: readonly string[]`
+- `environments?: readonly EslintEnvironment[]` where `EslintEnvironment` is a string literal union mirroring the runtime validation in `mergeGlobals` (Step 3). Unknown tokens throw at runtime; the type narrows the surface so the throw is rare in practice.
+- `ignorePaths?: readonly string[]` — appended to the preset's default ignores; does not replace them.
+- `extraConfigs?: readonly FlatConfig[]`
+- `allowConsoleWarnError?: boolean` — when `false`, the `no-console` rule disallows `warn`/`error` too; defaults to `true`.
+
+`CreateNodeEslintConfigOptions` MUST declare the same shape without `environments` (the Node factory hardcodes Node globals per Step 7).
+
+`NoChildrenPropEntry` MUST declare:
+
+- `component: string`
+- `prop: string`
+- `forbid: readonly string[]` — non-empty at the type level via a branded helper if practical, otherwise validated at runtime (preferred to stay simple).
+
+`LiteralI18nKeyOptions` MUST declare:
+
+- `dynamicFunction?: string` — default `'t'`. The dynamic function is the one the rule FLAGS when called with a literal argument; the convention is that `t()` is the runtime-keyed function whose arguments come from variables.
+- `staticFunction?: string` — default `'ts'`. The static function is the one the rule's error message redirects consumers TOWARDS; the convention is that `ts('key')` is the compile-time-known counterpart.
+
+`RestrictedSyntaxRule` MUST resolve to ESLint's `Linter.RuleEntry` shape so the consumer can spread it into `rules`.
+
+## Step 13 — Export wiring
+
+`package.json` exports map MUST declare the `./eslint` entry in conditional form, matching `./vite` and `./lint-staged`:
+
+```json
+"./eslint": {
+  "types": "./eslint/index.d.mts",
+  "import": "./eslint/index.mjs"
+}
+```
+
+The `types` condition MUST appear before `import`, per publint's ordering rule (Spec 14 Step 8).
+
+`files` already includes the `eslint` directory (Spec 01); no addition is required there.
+
+## Step 14 — Type-only dependency
+
+`eslint` is declared as an optional peer dependency (Spec 01). The `.d.mts` file imports types from `eslint` via `import type { Linter } from 'eslint';`. This is a type-only import; it does NOT pull `eslint` into the runtime graph and does NOT make the peer non-optional.
+
+If a consumer imports the types without having `eslint` installed, TypeScript surfaces a clear `Cannot find module 'eslint'` error. This is the desired behaviour: the consumer needs ESLint installed to use the preset anyway.
+
+## Step 15 — Self-hosting
+
+The repository does not lint its own ESLint preset (Spec 14 Step 1). The `.d.mts` is therefore not validated by an internal type-check. Validation comes from:
+
+- `publint` (Spec 14 Step 8) checks that the `types` condition resolves to an existing file.
+- An optional `arethetypeswrong` check MAY be added to the verify pipeline; if added, it MUST run after `publint` and treat its findings as advisory until the preset stabilizes.
