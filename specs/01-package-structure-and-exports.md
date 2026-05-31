@@ -29,6 +29,7 @@ The `package.json` MUST:
 - Declare `"type": "module"` so every `.js` is treated as ESM. JavaScript artifacts are written as `.mjs` and type declarations as `.d.mts` to keep extensions explicit regardless of the consumer's resolution mode.
 - Declare `"license"` and a stable `"repository.url"`.
 - Declare `"publishConfig.registry"` pointing at the chosen registry (GitHub Packages or npm). Scoped packages on GitHub Packages require this entry to override the public registry default.
+- Declare `"publishConfig.access": "public"`. npm refuses to attach provenance attestations to a package published as `restricted` (or to a new private package). Because the publish pipeline (Spec 13) MUST always attach provenance, the access level MUST be `public`. On GitHub Packages, who can actually pull the package is still gated by the GitHub repo/org permissions, regardless of this flag.
 - Declare `"engines.node"` matching the lowest Node major the presets are tested against. The verify pipeline pins this Node version.
 - Declare its OWN Prettier reference by pointing `"prettier"` at the in-repo Prettier preset path. This guarantees the package is formatted with the same preset it publishes.
 

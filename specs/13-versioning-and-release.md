@@ -133,6 +133,8 @@ GitHub Packages and the public npm registry both honour `--provenance`. No regis
 
 The package's `publishConfig.registry` setting (Spec 01) remains the single source of truth for registry URL. The provenance attestation references the workflow URL and commit SHA; consumers verifying provenance compare those against the package's `repository.url`.
 
+`publishConfig.access` MUST be `"public"` (Spec 01 Step 2). npm rejects provenance for any publish that is `restricted` or for a first-time private package, with `EUSAGE: Can't generate provenance for new or private package, you must set access to public`. The publish pipeline never falls back to a non-provenance publish (Step 16), so a `restricted` access value would permanently break releases. On GitHub Packages this flag does NOT open the package to the world — access remains governed by repository/organization permissions.
+
 ## Step 15 — Consumer verification
 
 Consumers can audit a published version with:
