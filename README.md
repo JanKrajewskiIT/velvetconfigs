@@ -1,76 +1,65 @@
 # @jankrajewskiit/configs
 
-Shared tooling configuration for SolidJS apps and libraries. It provides reusable presets for ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky, and Nginx.
+Shared tooling presets for SolidJS apps and libraries. One install, one version, the same baseline everywhere.
+
+Covers: ESLint (flat-config, type-aware), Prettier, Stylelint (CSS Modules), TypeScript base configs, Vite app/library factories, lint-staged, Husky pre-commit, Nginx SPA server block.
 
 ## Install
-
-The package is published to **GitHub Packages**. Add this to a project-level `.npmrc`:
-
-```
-@jankrajewskiit:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GHCR_TOKEN}
-```
-
-Then:
 
 ```bash
 npm install --save-dev @jankrajewskiit/configs
 ```
 
-Install only the peer dependencies you use (`eslint`, `prettier`, `stylelint`, `typescript`, `vite`, `lint-staged`).
+The package is published to GitHub Packages. Consumers add an `.npmrc` next to their `package.json`:
+
+```ini
+@jankrajewskiit:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+`GITHUB_TOKEN` must have `read:packages` scope.
+
+Optional tools (install only what you run):
+
+```bash
+npm install --save-dev eslint typescript-eslint prettier stylelint vite vite-plugin-solid vite-plugin-dts lint-staged
+```
 
 ## Subpath exports
 
-| Export                                       | Purpose                                                                                                                                                                                                                     |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@jankrajewskiit/configs/eslint`             | `createEslintConfig` (Solid/browser), `createNodeEslintConfig` (Node), plus `buildNoChildrenPropSelectors` and `buildLiteralI18nKeySelectors` helpers                                                                       |
-| `@jankrajewskiit/configs/prettier`           | Prettier preset (JSON)                                                                                                                                                                                                      |
-| `@jankrajewskiit/configs/stylelint`          | Stylelint preset (JSON)                                                                                                                                                                                                     |
-| `@jankrajewskiit/configs/tsconfig/app`       | TS config for browser app code                                                                                                                                                                                              |
-| `@jankrajewskiit/configs/tsconfig/node`      | TS config for node-side code                                                                                                                                                                                                |
-| `@jankrajewskiit/configs/tsconfig/app-vite`  | `app` + `vite/client` types                                                                                                                                                                                                 |
-| `@jankrajewskiit/configs/tsconfig/node-vite` | `node` + `node` types                                                                                                                                                                                                       |
-| `@jankrajewskiit/configs/tsconfig/lib`       | `app` + declaration emit. Use when **`tsc` emits `.d.ts`** (e.g. `tsc -b && vite build` with no `vite-plugin-dts`). If `vite-plugin-dts` already emits types for you, use `tsconfig/app` with `declaration: false` instead. |
-| `@jankrajewskiit/configs/tsconfig/test`      | `app` + Vitest / Testing Library types                                                                                                                                                                                      |
-| `@jankrajewskiit/configs/vite`               | `createSolidAppViteConfig` (apps) and `createSolidLibViteConfig` (libraries)                                                                                                                                                |
-| `@jankrajewskiit/configs/lint-staged`        | `createLintStagedConfig` factory + default                                                                                                                                                                                  |
-| `@jankrajewskiit/configs/husky/pre-commit`   | Pre-commit hook script                                                                                                                                                                                                      |
-| `@jankrajewskiit/configs/nginx/spa`          | Nginx SPA config                                                                                                                                                                                                            |
+| Subpath                                      | Purpose                                          |
+| -------------------------------------------- | ------------------------------------------------ |
+| `@jankrajewskiit/configs/eslint`             | ESLint flat-config factories + selector builders |
+| `@jankrajewskiit/configs/prettier`           | Prettier JSON preset                             |
+| `@jankrajewskiit/configs/stylelint`          | Stylelint JSON preset                            |
+| `@jankrajewskiit/configs/tsconfig/app`       | Browser baseline                                 |
+| `@jankrajewskiit/configs/tsconfig/node`      | Node baseline                                    |
+| `@jankrajewskiit/configs/tsconfig/app-vite`  | App baseline + `vite/client` types               |
+| `@jankrajewskiit/configs/tsconfig/node-vite` | Node baseline + `node` types                     |
+| `@jankrajewskiit/configs/tsconfig/lib`       | Library declaration emit                         |
+| `@jankrajewskiit/configs/tsconfig/test`      | Test profile (Vitest + Testing Library)          |
+| `@jankrajewskiit/configs/vite`               | App + library Vite factories                     |
+| `@jankrajewskiit/configs/lint-staged`        | lint-staged factory + default                    |
+| `@jankrajewskiit/configs/husky/pre-commit`   | Husky pre-commit shell helper                    |
+| `@jankrajewskiit/configs/nginx/spa`          | Nginx SPA server block                           |
 
-## Usage examples
-
-### ESLint (`eslint.config.mjs`)
-
-For Solid/browser apps:
+## ESLint
 
 ```js
 import { createEslintConfig } from '@jankrajewskiit/configs/eslint';
 
 export default createEslintConfig({
   tsconfigRootDir: import.meta.dirname,
-  ignorePaths: ['storybook-static'],
-  environments: ['browser'], // 'node' | 'worker' | 'serviceworker' | 'jest' | 'vitest'
+  environments: ['browser', 'vitest'],
 });
 ```
 
-For Node-side projects (CLI, scripts, server) - same baseline minus Solid, `jsx-a11y`, and `css-modules`:
+Node-side projects use `createNodeEslintConfig`. `tsconfigRootDir` is required for both factories.
+
+Extending with selector-based rules:
 
 ```js
-import { createNodeEslintConfig } from '@jankrajewskiit/configs/eslint';
-
-export default createNodeEslintConfig({
-  tsconfigRootDir: import.meta.dirname,
-});
-```
-
-Add project-specific selectors via `extraConfigs`:
-
-```js
-import {
-  buildLiteralI18nKeySelectors,
-  buildNoChildrenPropSelectors,
-  createEslintConfig,
-} from '@jankrajewskiit/configs/eslint';
+import { createEslintConfig, buildNoChildrenPropRule } from '@jankrajewskiit/configs/eslint';
 
 export default createEslintConfig({
   tsconfigRootDir: import.meta.dirname,
@@ -78,56 +67,60 @@ export default createEslintConfig({
     {
       files: ['src/**/*.{ts,tsx}'],
       rules: {
-        'no-restricted-syntax': [
-          'error',
-          ...buildNoChildrenPropSelectors([
-            { component: 'DialogTitle', prop: 'label' },
-            { component: 'IconButton', prop: 'label', forbid: 'title' },
-          ]),
-          ...buildLiteralI18nKeySelectors(),
-        ],
+        'no-restricted-syntax': buildNoChildrenPropRule([
+          { component: 'Button', prop: 'label', forbid: ['children', 'title'] },
+        ]),
       },
     },
   ],
 });
 ```
 
-### Prettier (`package.json`)
+Supported environment tokens: `browser`, `node`, `worker`, `serviceworker`, `jest`, `vitest`.
+
+## Prettier
+
+Point the consumer's `package.json`:
 
 ```json
 { "prettier": "@jankrajewskiit/configs/prettier" }
 ```
 
-### Stylelint (`package.json`)
+Or extend in a local `.prettierrc.json`.
+
+## Stylelint
 
 ```json
 { "stylelint": { "extends": "@jankrajewskiit/configs/stylelint" } }
 ```
 
-### TypeScript (`tsconfig.json`)
+## TypeScript
 
 ```json
 { "extends": "@jankrajewskiit/configs/tsconfig/app-vite" }
 ```
 
-### Vite — application (`vite.config.ts`)
+A library that delegates declarations to `vite-plugin-dts` extends `tsconfig/app` with `declaration: false`. A library that emits declarations via `tsc` extends `tsconfig/lib`.
+
+## Vite — application
 
 ```ts
 import { defineConfig, loadEnv } from 'vite';
 import { createSolidAppViteConfig } from '@jankrajewskiit/configs/vite';
 
-export default defineConfig(({ mode }) =>
-  createSolidAppViteConfig(
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return createSolidAppViteConfig(
     {},
     {
-      port: 3000,
-      apiProxy: { enabled: true, env: loadEnv(mode, process.cwd(), '') },
+      port: 5173,
+      apiProxy: { enabled: true, env },
     },
-  ),
-);
+  );
+});
 ```
 
-### Vite — library (`vite.config.ts`)
+## Vite — library
 
 ```ts
 import { defineConfig } from 'vite';
@@ -137,41 +130,61 @@ export default defineConfig(async () =>
   createSolidLibViteConfig(
     {},
     {
-      fileName: 'my-lib',
-      // Either list packages explicitly...
-      externalPackages: ['solid-js', '@solidjs/router', 'solid-icons'],
-      // ...or auto-externalize everything from peerDependencies + dependencies:
+      fileName: 'index',
       externalizeFromPackageJson: true,
     },
   ),
 );
 ```
 
-Defaults: `entry: 'src/index.ts'`, ESM-only output, `preserveModules: true`, single CSS bundle, `target: 'esnext'`, `vite-plugin-dts` enabled.
+`fileName` is required. The library factory is async; wrap it in an async thunk.
 
-### lint-staged (`lint-staged.config.mjs`)
+## lint-staged
 
 ```js
 export { default } from '@jankrajewskiit/configs/lint-staged';
 ```
 
-### Husky pre-commit (`.husky/pre-commit`)
+Custom globs:
+
+```js
+import { createLintStagedConfig } from '@jankrajewskiit/configs/lint-staged';
+
+export default createLintStagedConfig({
+  prettierTarget: '*.{json,md,yml,yaml,html,graphql}',
+});
+```
+
+## Husky
+
+Create `.husky/pre-commit`:
 
 ```sh
-hook_dir="$(dirname "$0")"
+hook_dir="$(cd "$(dirname "$0")" && pwd)"
 . "$hook_dir/../node_modules/@jankrajewskiit/configs/husky/pre-commit.sh"
 ```
 
-## License
+Enable Husky once with `npm install` (the `prepare` script wires hooks).
 
-MIT
+## Nginx
+
+In your Dockerfile:
+
+```dockerfile
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY node_modules/@jankrajewskiit/configs/nginx/spa.conf /etc/nginx/conf.d/default.conf
+EXPOSE 3000
+```
+
+Override the `Content-Security-Policy` for any external API origin the SPA actually calls.
 
 ## Releasing
 
-Publication is automated via GitHub Actions:
+1. `main` must be green on the verify workflow.
+2. `npm version patch | minor | major` (creates a commit and a `vX.Y.Z` tag).
+3. `git push --follow-tags`.
+4. The publish workflow runs verify → check-version → publish.
 
-1. Bump the version: `npm version patch | minor | major` (creates commit + tag `vX.Y.Z`).
-2. Push commit and tag: `git push && git push --tags`.
-3. The `Publish` workflow runs `verify` on Node 22 and 25, checks the tag matches `package.json` version, and publishes to GitHub Packages.
+## Upgrading
 
-The `verify` workflow also runs on every push and PR to `main`.
+See the GitHub Releases page for migration notes. Breaking changes are reserved for MAJOR releases and documented inline with their entries.

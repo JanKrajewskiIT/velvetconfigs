@@ -1,7 +1,11 @@
-node_modules
-dist
+node_modules/
+.husky/_/
+coverage/
+dist/
+build/
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
 *.log
-.vscode
-.idea
 AGENTS.md

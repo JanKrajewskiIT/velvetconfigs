@@ -1,4 +1,4 @@
-name: Verify
+name: verify
 
 on:
   workflow_call:
@@ -14,26 +14,29 @@ jobs:
       packages: read
     env:
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [25]
-
+        node-version: [25.x]
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           scope: '@jankrajewskiit'
+          registry-url: 'https://npm.pkg.github.com'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install
         run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Audit dependencies (advisory)
-        continue-on-error: true
+      - name: Audit
         run: npm audit --audit-level=high
 
-      - name: Verify package
+      - name: Verify
         run: npm run verify

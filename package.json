@@ -1,18 +1,37 @@
 {
   "name": "@jankrajewskiit/configs",
-  "version": "1.1.8",
-  "description": "Shared tooling configs (eslint, prettier, stylelint, tsconfig, vite, lint-staged, husky, nginx) for SolidJS apps and libraries.",
-  "type": "module",
+  "version": "2.0.0",
+  "description": "Shared tooling presets (ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky, Nginx) for SolidJS apps and libraries.",
   "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=25"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jankrajewskiit/velvet-configs.git"
+    "url": "git+https://github.com/jankrajewskiit/configs.git"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
   },
+  "keywords": [
+    "eslint-config",
+    "prettier-config",
+    "stylelint-config",
+    "tsconfig",
+    "vite-config",
+    "solidjs",
+    "lint-staged",
+    "husky",
+    "nginx"
+  ],
+  "prettier": "./prettier/index.json",
   "exports": {
-    "./eslint": "./eslint/index.mjs",
+    "./eslint": {
+      "types": "./eslint/index.d.mts",
+      "import": "./eslint/index.mjs"
+    },
     "./prettier": "./prettier/index.json",
     "./stylelint": "./stylelint/index.json",
     "./tsconfig/app": "./tsconfig/app.json",
@@ -41,28 +60,9 @@
     "lint-staged",
     "husky",
     "nginx",
-    "README.md",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
-  "keywords": [
-    "config",
-    "configs",
-    "preset",
-    "eslint-config",
-    "prettier-config",
-    "stylelint-config",
-    "tsconfig",
-    "vite",
-    "vite-config",
-    "solidjs",
-    "solid",
-    "lint-staged",
-    "husky",
-    "nginx"
-  ],
-  "engines": {
-    "node": ">=25"
-  },
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -70,14 +70,27 @@
     "prepublishOnly": "npm run verify",
     "prepare": "husky"
   },
-  "prettier": "./prettier/index.json",
+  "dependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-css-modules": "^2.12.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "eslint-plugin-solid": "^0.14.5",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.6.0",
+    "stylelint-config-standard": "^40.0.0",
+    "typescript-eslint": "^8.60.0",
+    "vite-plugin-dts": "^5.0.1",
+    "vite-plugin-solid": "^2.11.12"
+  },
   "peerDependencies": {
-    "eslint": ">=9",
-    "lint-staged": ">=16",
-    "prettier": ">=3",
-    "stylelint": ">=17",
-    "typescript": ">=5",
-    "vite": ">=6"
+    "eslint": ">=9.0.0",
+    "lint-staged": ">=17.0.0",
+    "prettier": ">=3.0.0",
+    "stylelint": ">=17.0.0",
+    "typescript": ">=5.5.0",
+    "vite": ">=6.0.0"
   },
   "peerDependenciesMeta": {
     "eslint": {
@@ -97,26 +110,18 @@
     },
     "vite": {
       "optional": true
+    },
+    "vite-plugin-dts": {
+      "optional": true
+    },
+    "vite-plugin-solid": {
+      "optional": true
     }
-  },
-  "dependencies": {
-    "@eslint/js": "^9.39.4",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-css-modules": "^2.12.0",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-simple-import-sort": "^13.0.0",
-    "eslint-plugin-solid": "^0.14.5",
-    "eslint-plugin-unused-imports": "^4.4.1",
-    "globals": "^17.6.0",
-    "stylelint-config-standard": "^40.0.0",
-    "typescript-eslint": "^8.59.1",
-    "vite-plugin-dts": "^5.0.0",
-    "vite-plugin-solid": "^2.11.12"
   },
   "devDependencies": {
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.8.3",
-    "publint": "^0.3.18"
+    "publint": "^0.3.21"
   }
 }
