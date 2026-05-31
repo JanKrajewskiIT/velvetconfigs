@@ -1,5 +1,5 @@
+import type { BuildOptions, LibraryFormats, UserConfig } from 'vite';
 import type { Options as SolidPluginOptions } from 'vite-plugin-solid';
-import type { UserConfig, LibraryFormats, BuildOptions } from 'vite';
 
 export interface ApiProxyOptions {
   enabled?: boolean;
@@ -10,7 +10,7 @@ export interface ApiProxyOptions {
   path?: string;
   changeOrigin?: boolean;
   secure?: boolean;
-  rewrite?: false | ((requestPath: string) => string);
+  rewrite?: ((path: string) => string) | false;
 }
 
 export interface LinkedWorkspaceFileAlias {
@@ -22,46 +22,48 @@ export interface LinkedWorkspaceOptions {
   enabled?: boolean;
   workspacePath?: string;
   packageName?: string;
-  dedupe?: string[];
-  optimizeDepsInclude?: string[];
-  optimizeDepsExclude?: string[];
-  fileAliases?: Array<string | LinkedWorkspaceFileAlias>;
+  fileAliases?: ReadonlyArray<string | LinkedWorkspaceFileAlias>;
+  dedupe?: readonly string[];
+  optimizeDepsInclude?: readonly string[];
+  optimizeDepsExclude?: readonly string[];
 }
 
 export interface CreateSolidAppViteConfigOptions {
+  projectRoot?: string;
   alias?: string | null;
   srcDir?: string;
   port?: number;
   host?: string | boolean;
-  solidPluginOptions?: Partial<SolidPluginOptions>;
+  solidPluginOptions?: SolidPluginOptions;
   apiProxy?: ApiProxyOptions;
   linkedWorkspace?: LinkedWorkspaceOptions;
 }
 
 export interface CreateSolidLibViteConfigOptions {
+  projectRoot?: string;
   alias?: string | null;
   srcDir?: string;
   entry?: string;
   fileName: string;
   formats?: LibraryFormats[];
-  externalPackages?: string[];
+  externalPackages?: readonly string[];
   externalizeFromPackageJson?: boolean;
   preserveModules?: boolean;
   preserveModulesRoot?: string;
   cssCodeSplit?: boolean;
   target?: BuildOptions['target'];
   dts?: false | Record<string, unknown>;
-  solidPluginOptions?: Partial<SolidPluginOptions>;
+  solidPluginOptions?: SolidPluginOptions;
 }
 
-export declare function readPeerDependencies(packageJsonPath?: string): string[];
-
-export declare function createSolidAppViteConfig(
+export function createSolidAppViteConfig(
   userConfig?: UserConfig,
   options?: CreateSolidAppViteConfigOptions,
 ): UserConfig;
 
-export declare function createSolidLibViteConfig(
+export function createSolidLibViteConfig(
   userConfig?: UserConfig,
   options?: CreateSolidLibViteConfigOptions,
 ): Promise<UserConfig>;
+
+export function readPeerDependencies(packageJsonPath?: string): string[];

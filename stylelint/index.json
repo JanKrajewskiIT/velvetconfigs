@@ -1,16 +1,43 @@
 {
-  "extends": "stylelint-config-standard",
+  "extends": ["stylelint-config-standard"],
   "rules": {
+    "selector-class-pattern": [
+      "^[a-z][a-zA-Z0-9]*$",
+      {
+        "message": "Expected class selector to be camelCase"
+      }
+    ],
+    "keyframes-name-pattern": [
+      "^[a-z][a-zA-Z0-9]*$",
+      {
+        "message": "Expected keyframe name to be camelCase"
+      }
+    ],
     "custom-property-pattern": null,
-    "keyframes-name-pattern": ["^[a-z][a-zA-Z0-9]*$", { "message": "Expected keyframe name to be camelCase" }],
-    "declaration-block-no-redundant-longhand-properties": true,
-    "shorthand-property-no-redundant-values": true,
     "no-descending-specificity": null,
     "no-duplicate-selectors": true,
-    "property-no-vendor-prefix": [true, { "ignoreProperties": ["backface-visibility"] }],
-    "declaration-property-value-no-unknown": [true, { "ignoreProperties": { "r": "/.*/" } }],
-    "selector-class-pattern": ["^[a-z][a-zA-Z0-9]*$", { "message": "Expected class selector to be camelCase" }],
-    "selector-pseudo-class-no-unknown": [true, { "ignorePseudoClasses": ["global"] }]
+    "selector-pseudo-class-no-unknown": [
+      true,
+      {
+        "ignorePseudoClasses": ["global"]
+      }
+    ],
+    "declaration-block-no-redundant-longhand-properties": true,
+    "shorthand-property-no-redundant-values": true,
+    "property-no-vendor-prefix": [
+      true,
+      {
+        "ignoreProperties": ["backface-visibility"]
+      }
+    ],
+    "declaration-property-value-no-unknown": [
+      true,
+      {
+        "ignoreProperties": {
+          "/.*/": ["/^var\\(--.+\\)$/"]
+        }
+      }
+    ]
   },
   "overrides": [
     {
