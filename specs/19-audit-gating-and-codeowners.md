@@ -185,7 +185,7 @@ With Steps 2–3 in place, this is a hard gate. A new advisory introduced by a b
 
 ## Step 15 — CI re-verification
 
-Local `verify` is necessary but not sufficient. The refresh MUST be opened as a PR, and the `verify.yml` workflow MUST pass against the new lockfile on the pinned Node major (currently 25, per Spec 17). The PR is the audit point: every range bump, every override, and every transitive change in the lockfile is reviewable in one diff.
+Local `verify` is necessary but not sufficient. The refresh MUST be opened as a PR, and the `verify.yml` workflow MUST pass against the new lockfile on the pinned Node major (currently 26, per Spec 17). The PR is the audit point: every range bump, every override, and every transitive change in the lockfile is reviewable in one diff.
 
 The PR MUST NOT be auto-merged even when verify passes. The whole point of the manual refresh is human review of cross-major bumps and override decisions. The Dependabot auto-merge policy from Spec 15 does not apply.
 

@@ -41,9 +41,9 @@ Notes:
 - The `node-version` matrix entry in `.github/workflows/verify.yml`.
 - The `node-version` value in `.github/workflows/publish.yml`.
 
-The current pin is `25`. Any change to this value is a coordinated edit across all four locations and is gated by Spec 13's deprecation policy when the new minimum is higher than a previously supported major.
+The current pin is `26`. Any change to this value is a coordinated edit across all four locations and is gated by Spec 13's deprecation policy when the new minimum is higher than a previously supported major.
 
-The file content is the bare major (e.g. `25`), not `v25` and not a minor (e.g. `25.0.0`). This is the form `nvm`, `fnm`, `volta`, and `nodenv` all accept.
+The file content is the bare major (e.g. `26`), not `v26` and not a minor (e.g. `26.0.0`). This is the form `nvm`, `fnm`, `volta`, and `nodenv` all accept.
 
 ## Step 4 — Interaction with the Husky hook
 
