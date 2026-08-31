@@ -8,4 +8,11 @@ build/
 .DS_Store
 Thumbs.db
 *.log
-AGENTS.md
+
+# Generated agent skill copies
+/.claude/skills/
+/.github/skills/
+
+# Generated agent skill copies
+/AGENTS.md
+/CLAUDE.md
