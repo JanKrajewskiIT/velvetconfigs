@@ -18,7 +18,9 @@ The factory accepts three glob options, each with a default:
 - `prettierTarget` — default `'*.{json,md,yml,yaml,html}'`. Files matched here run Prettier write only.
 - `stylelintTarget` — default `'*.css'`. Files matched here run Stylelint with `--fix` followed by Prettier write.
 
-The factory returns a plain object mapping each glob to its commands array. Commands are passed to lint-staged verbatim.
+The factory returns one plain config object containing all three glob keys mapped to their command arrays. Commands are passed to lint-staged verbatim.
+
+Target strings are object keys. If a consumer supplies the same string for multiple targets, later entries replace earlier ones in this order: ESLint, Stylelint, Prettier. This preserves ordinary JavaScript object semantics; consumers should use distinct target globs when they need multiple pipelines.
 
 ## Step 3 — Tool ordering rules
 
@@ -65,3 +67,10 @@ The exports map exposes `./lint-staged` as a conditional export with `types` poi
 ## Step 8 — Interaction with Husky
 
 The lint-staged preset is invoked by the Husky pre-commit hook described in Spec 09. The factory itself does not know about Husky; it produces a config consumed by the lint-staged binary, which the hook executes.
+
+## Acceptance criteria
+
+- A no-argument call returns the exact three default keys and ordered command arrays from Steps 2–3.
+- Each custom target replaces only its corresponding key, and commands remain unchanged.
+- Equal target strings exhibit the documented last-entry-wins behavior.
+- Named/default runtime exports and `.d.mts` declarations agree and resolve through `./lint-staged`.

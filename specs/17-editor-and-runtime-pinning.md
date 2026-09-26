@@ -71,8 +71,17 @@ Minimum content:
 
 `.gitattributes` is not part of the published tarball; it is repository-local.
 
+The current repository additionally pins LF explicitly for `*.sh` and `*.conf`, and marks PNG, JPG, JPEG, GIF, ICO, WOFF, WOFF2, TTF, EOT, and WASM files as binary. A replacement MUST preserve these classifications.
+
 ## Step 7 — Verification
 
 The repository structure summary in Spec 14 is extended to include `.editorconfig`, `.nvmrc`, `.node-version`, and `.gitattributes` at the root.
 
 The verify pipeline does not enforce `.editorconfig` directly; Prettier covers the file types it owns, and `.editorconfig` covers the rest. A maintainer running `git diff` against a Windows checkout immediately surfaces any drift.
+
+## Acceptance criteria
+
+- `.nvmrc` and `.node-version` both contain bare major `26`; `engines.node`, verify, and publish require the same major.
+- EditorConfig resolves to UTF-8, LF, two-space indentation, final newline, and trailing-whitespace trimming, except Markdown trailing whitespace remains allowed.
+- Git attributes normalize all text to LF, explicitly normalize shell/Nginx files, and preserve the listed binary formats.
+- None of the editor/runtime pinning files are included in the npm package tarball.

@@ -31,7 +31,7 @@ Strictness profile:
 - `strict: true`.
 - `noUnusedLocals: false` — left to ESLint (unused-imports plugin) so warnings can be incremental.
 - `noUnusedParameters: true`.
-- `erasableSyntaxOnly: true` — prevents non-erasable TS features (enum, parameter properties, namespaces with value semantics) that hostile interact with `verbatimModuleSyntax` and bundler transforms.
+- `erasableSyntaxOnly: true` — prevents non-erasable TS features (enum, parameter properties, namespaces with value semantics) that interact poorly with `verbatimModuleSyntax` and bundler transforms.
 - `noFallthroughCasesInSwitch: true`.
 - `noUncheckedSideEffectImports: true`.
 - `noUncheckedIndexedAccess: true` — indexed access yields `T | undefined` to model real runtime behavior.
@@ -52,7 +52,7 @@ Each is a one-line extension over its base:
 - `app-vite.json` extends `app.json` and adds `types: ["vite/client"]` so `import.meta.env`, `import.meta.glob`, and asset modules are typed correctly in app code.
 - `node-vite.json` extends `node.json` and adds `types: ["node"]` so Node built-ins are available in tooling scripts.
 
-The naming is intentional: "vite" denotes the typing addition needed when the file is consumed by a Vite-driven build, regardless of whether the consumer is a browser app or a Node-side helper.
+The suffix identifies common Vite-repository roles, not one shared ambient-type set: `app-vite` adds Vite client globals, while `node-vite` adds Node globals for Vite configuration and build helpers. A Node-side project that also needs `vite/client` must add it explicitly alongside `node`.
 
 ## Step 5 — `lib.json` (library declaration emit)
 
@@ -86,6 +86,16 @@ Consumers extend the appropriate base in their own `tsconfig.json`:
 
 Composite project layouts (`tsconfig.json` + `tsconfig.node.json` + `tsconfig.test.json` referenced via `references`) compose freely on top of these bases.
 
+The package exports configuration only. Consumers are responsible for installing every ambient type provider named by their selected config: Vite for `vite/client`, `@types/node` for `node`, Vitest for `vitest/globals`, and `@testing-library/jest-dom` for its matcher augmentation. Those providers are not added as peers solely because a tsconfig references them.
+
 ## Step 8 — Export entries
 
 The exports map exposes each tsconfig file under `./tsconfig/<name>` mapping directly to the JSON path. TypeScript resolves the path as-is; no conditional exports are required.
+
+## Acceptance criteria
+
+- All six exported JSON files parse, resolve their relative `extends`, and contain the exact compiler options described above.
+- A minimal browser, Node, library, and test consumer observes the stated JSX, DOM, ambient type, strictness, and declaration-emit behavior.
+- `app-vite` exposes Vite client types but not Node globals; `node-vite` exposes Node globals but does not implicitly add Vite client types.
+- `lib` emits declarations and declaration maps only to `dist`; all other bases retain their stated no-emit behavior.
+- Missing consumer-owned ambient type packages fail resolution rather than being silently supplied by this package.

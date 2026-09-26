@@ -19,18 +19,19 @@ The factory MUST:
 
 ## Step 3 — Options bag (defaults)
 
+- `projectRoot` — root used to resolve `entry`, `srcDir`, and the package manifest. Default `process.cwd()`.
 - `alias` — default `'~'`; `null` disables aliasing.
 - `srcDir` — default `'src'`.
 - `entry` — default `'src/index.ts'`.
 - `fileName` — REQUIRED. The factory MUST throw with a descriptive error when this is missing. `fileName` is the base name used by Vite's library output; without it Vite cannot resolve output filenames.
 - `formats` — default `['es']`. Library output is ESM-only by policy; consumers wanting CommonJS extend this.
-- `externalPackages` — explicit array of package names treated as external.
-- `externalizeFromPackageJson` — boolean. When true, the factory reads the package's `peerDependencies` and `dependencies` and unions them with `externalPackages`. This is the recommended pattern; the explicit array remains as an escape hatch.
+- `externalPackages` — explicit array of package names treated as external. Default `[]`.
+- `externalizeFromPackageJson` — boolean, default `false`. When true, the factory reads the package's `peerDependencies` and `dependencies` and unions them with `externalPackages`. This is the recommended pattern; the explicit array remains as an escape hatch.
 - `preserveModules` — default `true`.
 - `preserveModulesRoot` — default `'src'`.
 - `cssCodeSplit` — default `false`.
 - `target` — default `'esnext'`.
-- `dts` — pass `false` to disable the dts plugin entirely; otherwise pass an options object that is spread onto the dts plugin defaults.
+- `dts` — default is enabled with `{ insertTypesEntry: true }`. Pass `false` to disable the plugin entirely; otherwise an options object is spread after the default and may override `insertTypesEntry`.
 - `solidPluginOptions` — verbatim to the Solid plugin.
 
 ## Step 4 — Externals matcher
@@ -73,6 +74,7 @@ Because the helper is async, the entire factory is async; consumers must wrap th
 1. Resolve externals (union of `externalPackages` and, optionally, peer/runtime deps from the package manifest).
 2. Build the base config with plugins, alias, build.lib, build.target, build.cssCodeSplit, and rollupOptions.
 3. Merge user config last via `mergeConfig` so the consumer can override any decision.
+4. Deduplicate `optimizeDeps.include`, `optimizeDeps.exclude`, and `resolve.dedupe` after merging, preserving first-occurrence order.
 
 ## Step 9 — Type declarations
 
@@ -84,9 +86,18 @@ Because the helper is async, the entire factory is async; consumers must wrap th
 
 ## Step 10 — Consumer wiring
 
-A library `vite.config.ts` calls the factory inside `defineConfig(async () => createSolidLibViteConfig(...))`. The async wrapper is mandatory; without it, Vite receives a Promise and throws.
+A library `vite.config.ts` calls the factory inside an async config callback, for example `defineConfig(async () => createSolidLibViteConfig(...))`. The consumer must await or return the factory promise through a Vite-supported async config shape.
 
 ## Step 11 — Pairing with TypeScript
 
 - If `dts: false` is used, the consumer MUST emit declarations through `tsc -b` and extend `tsconfig/lib`. See Spec 05, Step 5.
 - Otherwise, the consumer MUST extend `tsconfig/app` and set `declaration: false` so the two emitters do not collide.
+
+## Acceptance criteria
+
+- Omitting `fileName` rejects the async call with a descriptive error; all other omitted options resolve to the defaults above.
+- The default output is ESM-only, preserves modules under `src`, targets `esnext`, emits one CSS bundle, and enables declaration generation with `insertTypesEntry: true`.
+- Explicit package names and their subpaths are external, every id containing `node_modules` is external, and unrelated source ids are not.
+- Manifest externalization returns the deduplicated union of dependency and peer names and degrades to an empty list for missing or invalid JSON.
+- User config is merged last and post-merge dependency arrays are deduplicated.
+- Runtime exports and `.d.mts` declarations expose both factories and `readPeerDependencies` through the single `./vite` subpath.

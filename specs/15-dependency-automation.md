@@ -10,13 +10,13 @@ The repository ships a Dependabot configuration covering both the npm registry (
 
 The configuration lives at `.github/dependabot.yml`. It MUST declare two ecosystems:
 
-- `package-ecosystem: "npm"` with `directory: "/"` and a `schedule.interval` of `weekly`. The `groups` block bundles `eslint-*`, `stylelint-*`, `prettier-*`, `typescript-eslint`, `vite-*`, `husky`, `lint-staged`, and `publint` so that related plugins land in one PR instead of one PR per plugin.
+- `package-ecosystem: "npm"` with `directory: "/"` and a `schedule.interval` of `weekly`. The `groups` block bundles the ESLint family (`@eslint/*`, `eslint`, `eslint-*`, `typescript-eslint`), Stylelint family (`stylelint`, `stylelint-*`), Prettier family (`prettier`, `prettier-*`), Vite family (`vite`, `vite-*`), and tooling (`husky`, `lint-staged`, `publint`, `globals`). It ignores the pseudo-dependency name `node`; Node pinning is owned by Spec 17.
 - `package-ecosystem: "github-actions"` with `directory: "/"` and a matching weekly schedule. This catches `actions/checkout`, `actions/setup-node`, and any third-party actions adopted later.
 
 Both ecosystems set:
 
 - `open-pull-requests-limit: 10` — enough headroom for grouped updates without flooding review.
-- `commit-message.prefix: "chore"` — Conventional Commits compatible; Spec 13 treats `chore:` as patch-level.
+- `commit-message.prefix: "chore"` with scope included — Conventional Commits compatible; Spec 13 treats `chore:` as patch-level.
 - `labels: ["dependencies"]` — for triage and release-note filtering.
 
 ## Step 3 — Update policy
@@ -36,3 +36,10 @@ The repository MUST NOT add Dependabot-only verification steps. The same `verify
 - Dependabot does not version-bump the package itself. Spec 13 (manual `npm version`) remains the only release path.
 - Dependabot does not edit `package-lock.json` independently of `package.json`. Lockfile-only refreshes are handled by Spec 19 (manual `ncu`/refresh, Steps 8+) so that the maintainer reviews the diff intentionally.
 - Dependabot does not update the Node version pin (`engines.node`, workflow `node-version`, `.nvmrc`). Node major bumps are an architectural decision per Spec 13 and Spec 17.
+
+## Acceptance criteria
+
+- Dependabot configuration parses with exactly one weekly npm entry and one weekly GitHub Actions entry rooted at `/`.
+- Both entries have a limit of 10, the `dependencies` label, and scoped `chore` commits; the Actions entry additionally labels `github-actions`.
+- npm updates are grouped by the exact package families above and do not change the Node runtime pin.
+- Dependency PRs execute the same reusable verification workflow as other pull requests; major and manual-refresh PRs remain subject to human review.

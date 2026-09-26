@@ -4,11 +4,11 @@
 
 The repository that produces the presets MUST consume them where reasonable. Self-hosting catches regressions early: a Prettier change that breaks consumer formatting also breaks the package's own format-check; an exports-map error caught by publint blocks publish.
 
-There are two well-defined cases where the package does NOT consume itself:
+The package does not consume presets for which this repository has no matching source workload:
 
 - ESLint — running the published ESLint factory over the package's own source would force the package to depend on its own published version (a chicken-and-egg problem on first publish). The package may add ESLint locally if and when its own source justifies it, but it is not required.
 - Stylelint — the package contains no CSS to lint.
-- TypeScript — the package contains no TypeScript source; every artifact is hand-authored JavaScript or JSON.
+- TypeScript — the package contains no compiled TypeScript implementation. Its `.d.mts` files are hand-authored declarations and are not emitted or type-checked by a repository build.
 - Vite — the package itself is not bundled.
 
 The package DOES consume its own Prettier preset, its own lint-staged config (a thin one, see Step 4), and its own Husky pre-commit hook helper.
@@ -55,31 +55,25 @@ At minimum, the repository ignores:
 
 The repository does NOT ignore `package-lock.json`. The lockfile is mandatory and used by `npm ci` in the verify pipeline.
 
-## Step 7 — Agent guideline submodules
+## Step 7 — Agent guideline source and generated adapters
 
-Agent runtimes (Claude Code, Cursor, the generic OpenAI-style `AGENTS.md` convention) each look for their guideline payload at a different path. To avoid duplicating the same rules/skills three times, the repository pulls a single upstream agent-guideline repo as three git submodules — one per path each runtime expects:
+The repository has exactly one agent-guideline submodule, `.agents`, sourced from `https://github.com/JanKrajewskiIT/claude.git`. It is the canonical source for shared rules, skills, client settings, validation, and installation scripts. `.claude`, `.codex`, `.cursor`, `.github/skills`, `.github/instructions`, `.vscode/settings.json`, and root `AGENTS.md` are generated consumer views, not additional submodules.
 
-- `.claude/` — Claude Code reads `.claude/CLAUDE.md`, `.claude/rules/`, `.claude/skills/`.
-- `.cursor/` — Cursor reads rule files under `.cursor/`.
-- `.agents/` — generic agents convention.
+Running `.agents/scripts/install-consumer.ps1` from the repository root without `-TargetRepository` targets the parent of `.agents`; an explicit target resolves to an absolute path. The script MUST reject a non-Git target and a target whose `.agents` path is not the script's owning guidance root. It supports PowerShell `-WhatIf` through `SupportsShouldProcess`.
 
-All three submodules target the SAME upstream so a single source of truth drives every agent runtime. `.gitmodules` therefore contains three entries with identical `url` and distinct `path`:
+The installer:
 
-```
-[submodule ".claude"]
-	path = .claude
-	url = https://github.com/JanKrajewskiIT/claude.git
-[submodule ".cursor"]
-	path = .cursor
-	url = https://github.com/JanKrajewskiIT/claude.git
-[submodule ".agents"]
-	path = .agents
-	url = https://github.com/JanKrajewskiIT/claude.git
-```
+- Replaces root `AGENTS.md` and `.claude/CLAUDE.md` with one self-contained document assembled from `.agents/rules/*.md` in filename order, headed `# Shared Agent Guidance`.
+- Removes an obsolete root `CLAUDE.md` when present so clients cannot discover two competing instruction files.
+- Replaces complete skill trees under `.claude/skills`, `.codex/skills`, `.cursor/skills`, and `.github/skills` from `.agents/skills`.
+- Replaces Claude, Codex, Cursor, and VS Code settings from the matching `.agents` templates.
+- Generates Claude rule adapters with `paths`, Copilot instruction adapters with `name`, `description`, and optional `applyTo`, and Cursor `.mdc` adapters with `globs` or `alwaysApply`. React and Solid rules remain separate for Copilot/Cursor; Claude receives one TSX routing adapter that instructs the client to select exactly one framework.
+- Adds every generated path to `.gitignore`, removes obsolete generated-ignore entries, removes generated files from the Git index with `git rm --cached --ignore-unmatch`, and leaves the generated files on disk.
+- Writes generated text as UTF-8 without BOM and fails immediately on an error.
 
-The repository ALSO maintains a root-level `AGENTS.md`, copied verbatim from `.claude/CLAUDE.md`. Some agent tooling looks for `AGENTS.md` at the repo root rather than reading inside `.claude/`. The root copy is GITIGNORED (Step 6): the canonical source lives in the submodule, and the root copy is regenerated on demand. Editing `AGENTS.md` directly is forbidden — edits MUST flow through the upstream submodule repo.
+Generated locations are replacement-owned: project-specific content MUST NOT be stored in them. Only `.agents` is committed as a submodule. The generated paths and root `AGENTS.md` are ignored and regenerated by rerunning the installer after updating `.agents`.
 
-None of `.claude/`, `.cursor/`, `.agents/`, `.gitmodules`, or `AGENTS.md` ship in the published tarball. They are absent from the `files` allowlist (Spec 01 Step 7) and have no impact on consumers.
+None of the agent customization files, `.gitmodules`, or generated views ship in the package tarball because they are absent from the `files` allowlist.
 
 ## Step 8 — publint integration
 
@@ -109,10 +103,15 @@ After applying every spec, the repository looks like:
 
 ```
 .
-├── .agents/                       # submodule (Step 7)
-├── .claude/                       # submodule (Step 7)
-├── .cursor/                       # submodule (Step 7)
+├── .agents/                       # sole agent-guidance submodule (Step 7)
+├── .claude/                       # generated, ignored client view
+├── .codex/                        # generated, ignored client view
+├── .cursor/                       # generated, ignored client view
 ├── .github/
+│   ├── CODEOWNERS
+│   ├── dependabot.yml
+│   ├── instructions/             # generated, ignored client view
+│   ├── skills/                   # generated, ignored client view
 │   └── workflows/
 │       ├── ci.yml
 │       ├── publish.yml
@@ -133,6 +132,7 @@ After applying every spec, the repository looks like:
 │   └── index.json
 ├── stylelint/
 │   └── index.json
+├── specs/                         # clean-room implementation brief; not published
 ├── tsconfig/
 │   ├── app-vite.json
 │   ├── app.json
@@ -167,3 +167,11 @@ When applying these specs from scratch, follow this order so each step can be va
 8. Spec 11: verify pipeline. Run on a draft PR.
 9. Spec 12: publish pipeline. Test with a pre-release tag against a private channel before the first stable release.
 10. Spec 13 → 14: codify versioning and self-hosting; ship the first stable release.
+
+## Acceptance criteria
+
+- `.gitmodules` contains one `.agents` entry and no generated client directory is configured as a submodule.
+- A dry run of the installer reports the intended replacements without mutation; a real run reproduces all client views, ignores them, and removes any tracked generated copies while retaining them on disk.
+- Running the installer twice from the same `.agents` revision is idempotent apart from line-ending normalization required by the script.
+- Repository formatting, lint-staged, and Husky wiring consume the local shipped artifacts described above; unsupported self-lint/build surfaces are absent.
+- Packing the npm package excludes `.agents`, generated client views, repository workflows, and `specs/`.

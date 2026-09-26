@@ -160,3 +160,11 @@ If sigstore is unreachable (rare but possible), the publish is retried by re-run
 ## Step 17 — Provenance documentation
 
 The README MUST mention provenance in the install section, including the `npm audit signatures` command. Consumers wiring this package into security-sensitive applications need to know the verification path exists.
+
+## Acceptance criteria
+
+- Every consumer-visible change is classified by the semver rules above; breaking changes include migration guidance and the completed deprecation cycle where applicable.
+- Stable and prerelease tags match the manifest version exactly and follow the publish behavior in Specs 12–13.
+- Every publish job has `id-token: write` and invokes npm with `--provenance`; failure never retries without provenance.
+- Registry verification links the tarball to this repository, tagged commit, and publish workflow.
+- README install guidance includes `npm audit signatures @jankrajewskiit/configs`, and upgrade guidance identifies the current major plus the previous major's last supported release when one exists.

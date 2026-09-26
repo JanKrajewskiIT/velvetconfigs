@@ -25,7 +25,7 @@ The preset MUST extend `stylelint-config-standard`. The standard config provides
 - `declaration-block-no-redundant-longhand-properties` is enabled.
 - `shorthand-property-no-redundant-values` is enabled.
 - `property-no-vendor-prefix` is enabled with an `ignoreProperties` allowlist for the small set of properties that still require vendor prefixes in production (e.g. `backface-visibility`).
-- `declaration-property-value-no-unknown` is enabled, with one regex escape hatch for SVG presentation attributes that Stylelint flags incorrectly (e.g. `r`).
+- `declaration-property-value-no-unknown` is enabled, with an `ignoreProperties` entry applying `/^var\\(--.+\\)$/` to every property. This permits complete CSS custom-property references such as `var(--color-text)` while retaining unknown-value checks for other values. The exception does not cover fallback syntax such as `var(--color-text, black)`.
 
 ## Step 6 — CSS Modules overrides
 
@@ -40,8 +40,15 @@ Two consumer wiring patterns must be supported:
 
 ## Step 8 — Plugin packaging
 
-`stylelint-config-standard` is declared as a regular `dependencies` entry of the preset package. Stylelint itself remains a peer (optional). Consumers who do not run Stylelint pay no installation cost; consumers who do run it get the standard config transitively without managing its version.
+`stylelint-config-standard` is declared as a regular `dependencies` entry of the preset package and is therefore installed with it. Stylelint itself remains an optional peer, so consumers install the runtime only when they run Stylelint; they receive the compatible standard config transitively.
 
 ## Step 9 — Export entry
 
 The exports map exposes the preset under `./stylelint` pointing at the JSON file. No `types` or `import` conditional is needed.
+
+## Acceptance criteria
+
+- The exported JSON extends `stylelint-config-standard` and contains the exact rule values and single CSS Module override described above.
+- Representative selectors prove camelCase class/keyframe enforcement, unrestricted custom-property names, and accepted `:global` usage.
+- A declaration value consisting of `var(--token)` is accepted, while an otherwise unknown value remains reportable.
+- `**/*.module.css` enables `property-no-unknown`; a non-module stylesheet does not receive that override.

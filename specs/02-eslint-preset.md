@@ -123,7 +123,7 @@ The `FlatConfig` type aliases `eslint`'s `Linter.Config`. The preset MUST NOT re
 
 - `component: string`
 - `prop: string`
-- `forbid: readonly string[]` — non-empty at the type level via a branded helper if practical, otherwise validated at runtime (preferred to stay simple).
+- `forbid: readonly string[]`. An empty array is valid and produces no selectors. The runtime throws when an entry lacks a non-empty `component` or `prop`, or when `forbid` is not an array; unsupported values inside `forbid` are ignored.
 
 `LiteralI18nKeyOptions` MUST declare:
 
@@ -159,3 +159,11 @@ The repository does not lint its own ESLint preset (Spec 14 Step 1). The `.d.mts
 
 - `publint` (Spec 14 Step 8) checks that the `types` condition resolves to an existing file.
 - An optional `arethetypeswrong` check MAY be added to the verify pipeline; if added, it MUST run after `publint` and treat its findings as advisory until the preset stabilizes.
+
+## Acceptance criteria
+
+- Both factories reject a missing or non-string `tsconfigRootDir` and return the specified flat-config layers in the specified order for valid input.
+- Browser environment tokens merge cumulatively; an unknown token throws. The Node factory always applies Node built-in globals and exposes no environment option.
+- Default/extended ignores, typed globs, test globs, console policy, test relaxations, and `extraConfigs` precedence produce the specified effective rules.
+- Selector helpers return the specified raw selectors/messages for `children`, `title`, string literals, and interpolation-free templates; wrappers prepend `error`.
+- Runtime exports, declarations, package export conditions, and README examples expose the same public surface without `any`.

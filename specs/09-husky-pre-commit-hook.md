@@ -36,6 +36,8 @@ The consumer creates `.husky/pre-commit` containing two lines:
 - A local variable assignment capturing the hook's own directory.
 - A `.` (source) directive that loads the preset script via `node_modules/<package>/husky/pre-commit.sh`.
 
+The sourced script accepts an existing `hook_dir` value from the consumer; when absent, it derives the directory from `$0`. It resolves the repository root as that directory's parent before passing `--cwd`.
+
 The consumer does NOT modify the preset script. Updates ship by bumping the preset version.
 
 ## Step 6 — Hook installation
@@ -50,3 +52,11 @@ The exports map exposes `./husky/pre-commit` pointing at `husky/pre-commit.sh`. 
 
 - A pre-commit hook failure aborts the commit. The developer must fix the failing files and re-stage.
 - The hook is intentionally strict: any non-zero exit from lint-staged blocks the commit. Skipping the hook (`git commit --no-verify`) is left to the developer's discretion and is not encouraged.
+
+## Acceptance criteria
+
+- With Node and global lint-staged available, the script invokes it once with `--no-stash --concurrent false --cwd <repo-root>` and returns its exit status.
+- With Node but no global lint-staged, it invokes `npx --no-install lint-staged` with the same flags; with neither launcher, it writes a diagnostic to stderr and exits 127.
+- With Node initially absent and fnm available, it evaluates the Bash environment command and retries Node discovery; failure still exits 127.
+- Sourcing from the two-line consumer hook computes the consumer repository root, not the package directory.
+- The raw shell file resolves through `./husky/pre-commit` and is included in the package tarball.

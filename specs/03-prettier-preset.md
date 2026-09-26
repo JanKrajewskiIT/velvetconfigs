@@ -21,7 +21,7 @@ No other keys are set. Consumers needing project-specific overrides (e.g. plugin
 Two consumer wiring patterns must be supported:
 
 - Inline reference: `"prettier": "<package>/prettier"` inside `package.json`. This is the recommended pattern for projects that need no overrides.
-- Local override file (`.prettierrc.js` / `.prettierrc.json`): the consumer imports/extends the preset and adds overrides. The preset shape is plain JSON, so it can be spread directly when the consumer authors their own config file.
+- JavaScript/ESM override file such as `prettier.config.mjs`: the consumer imports the JSON preset with the JSON import syntax required by its supported Node version (Node 26 uses `with { type: 'json' }`) and spreads it before local overrides. Prettier has no generic `extends` key, and a `.prettierrc.json` cannot import and spread another JSON package, so the documentation MUST NOT recommend that form for layered overrides.
 
 ## Step 4 — Package self-reference
 
@@ -30,3 +30,10 @@ The package itself wires `"prettier": "./prettier/index.json"` in its own `packa
 ## Step 5 — Export entry
 
 The exports map exposes the preset under the `./prettier` subpath pointing at the JSON file. No `types` or `import` conditional is needed because Prettier only consumes the path string.
+
+## Acceptance criteria
+
+- The exported JSON contains exactly `endOfLine`, `printWidth`, `semi`, `singleQuote`, and `trailingComma` with the values in Step 2.
+- Prettier resolves the package-level string reference from a consumer installation.
+- A JavaScript/ESM consumer config can import the preset and override one value without mutating the shared object.
+- The package's own `prettier` field points directly to the same shipped JSON file.

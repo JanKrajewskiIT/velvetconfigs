@@ -29,13 +29,13 @@ Each matrix entry runs the same step list in isolation.
 
 The job MUST execute these steps in order:
 
-1. `actions/checkout` (pinned to a major version) — fetch the repository.
-2. `actions/setup-node` (pinned to a major version) with:
+1. `actions/checkout@v6` — fetch the repository.
+2. `actions/setup-node@v6` with:
    - `node-version` taken from the matrix entry.
    - `scope` set to the package's npm scope (required so the implicit `.npmrc` is wired for GitHub Packages).
    - `cache: 'npm'` to enable the action's built-in dependency cache keyed on the lockfile.
 3. `npm ci` — install from the lockfile. `ci` is mandatory; `install` is forbidden because it can mutate the lockfile silently.
-4. An advisory audit step that runs `npm audit --audit-level=high` with `continue-on-error: true`. The intent is reporting, not gating; a high-severity advisory does not fail the build but is surfaced in the log.
+4. A hard-gated audit step named `Audit` that runs `npm audit --audit-level=high` without `continue-on-error`. Spec 19 supersedes the earlier advisory policy.
 5. `npm run verify` — runs the package's own verify script (Prettier check + publint). See Spec 14 for the script definition.
 
 ## Step 5 — `ci.yml` entrypoint
@@ -51,7 +51,7 @@ No additional steps live in `ci.yml`; it is a thin entrypoint. Adding gating log
 ## Step 6 — Failure semantics
 
 - A failing verify step fails the job and blocks the pull request via branch protection (configured in the repository settings, outside the workflow file).
-- The advisory audit step never fails the job. Surface vulnerabilities are caught by Dependabot or manual audit reviews, not by gating PRs.
+- A high- or critical-severity audit finding fails the job under Spec 19. Any temporary threshold change follows Spec 19's documented suppression policy.
 
 ## Step 7 — Secrets handling
 
@@ -69,3 +69,12 @@ Outside the workflow files themselves, the repository settings MUST require:
 ## Step 9 — Local parity
 
 Running `npm run verify` locally produces the same result as the CI verify step. Developers can — and SHOULD — run it before pushing. The pre-commit hook (Spec 09) catches formatting drift; the verify script catches packaging drift (publint).
+
+The local command does not include `npm ci` or `npm audit`; local parity here refers only to the final `npm run verify` step. A complete local reproduction also requires the install and audit commands from Step 4.
+
+## Acceptance criteria
+
+- `ci.yml` triggers only for pushes and pull requests targeting `main` and delegates its sole job to `verify.yml`.
+- A reusable-workflow run on Node `26.x` uses `actions/checkout@v6` and `actions/setup-node@v6`, then performs `npm ci`, hard-gates `npm audit --audit-level=high`, and runs `npm run verify` in that order.
+- The verify job has only `contents: read` and `packages: read`; an optional `GHCR_TOKEN` is forwarded only to package installation and is never printed.
+- A failed install, audit, format check, or publint check fails the reusable workflow.

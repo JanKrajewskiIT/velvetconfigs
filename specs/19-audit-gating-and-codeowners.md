@@ -2,7 +2,7 @@
 
 ## Step 1 — Principle
 
-The verify pipeline currently runs `npm audit --audit-level=high` with `continue-on-error: true`. Findings are surfaced but never block a merge. For a package consumed across multiple downstream services, this is the wrong default: a `high` advisory in a dependency MUST gate the release.
+An earlier verify baseline ran `npm audit --audit-level=high` with `continue-on-error: true`. This spec supersedes that historical behavior: for a package consumed across multiple downstream services, a `high` advisory in a dependency MUST gate the release. The current workflow implements the hard gate.
 
 CODEOWNERS routes every PR to the maintainer responsible for the changed surface. Without it, dependency-bump PRs and helper-rule changes can land without the right pair of eyes.
 
@@ -54,7 +54,7 @@ When additional maintainers join, the per-directory lines diverge from the catch
 The repository SHOULD configure branch protection on `main`:
 
 - Require pull-request review from CODEOWNERS.
-- Require status checks: `verify` (from `ci.yml`) AND `check-version` (publish.yml's gate, only relevant on tag pushes).
+- Require the `verify` status check from `ci.yml`. The `check-version` job runs only for tag-triggered publishing and therefore is not a branch-protection check.
 - Require branches to be up to date before merging.
 - Restrict force-push and direct push.
 
@@ -204,3 +204,11 @@ The quarterly refresh SHOULD be scheduled as a maintainer task. Each refresh PR 
 - Any advisory suppressions invoked under Step 3.
 
 This record is the operational trail Spec 13's changelog and provenance together cannot capture by themselves: the why behind the version skew between this release and the previous one.
+
+## Acceptance criteria
+
+- `npm audit --audit-level=high` fails verification on high or critical findings unless the explicit, time-bounded suppression policy is active.
+- CODEOWNERS includes a catch-all plus every shipped tool directory, workflows, Dependabot configuration, and `specs/`.
+- Main-branch protection requires code-owner review and the CI verify status; tag-only publish jobs are excluded from branch requirements.
+- A refresh PR records crossed majors, every override and its removal condition, and every temporary audit suppression; it is never auto-merged.
+- The regenerated dependency graph passes local verify, package dry-run, audit, and the CI workflow before a major release is tagged.

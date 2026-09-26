@@ -9,10 +9,20 @@ build/
 Thumbs.db
 *.log
 
-# Generated agent skill copies
-/.claude/skills/
-/.github/skills/
+# Generated agent customizations
+/.claude/rules/
+/.cursor/rules/
+/.github/instructions/
 
-# Generated agent skill copies
+/.claude/settings.json
+/.codex/config.toml
+/.cursor/cli.json
+/.cursor/permissions.json
+/.vscode/settings.json
+
+/.claude
+/.codex
+/.cursor
+/.github/skills/
 /AGENTS.md
 /CLAUDE.md

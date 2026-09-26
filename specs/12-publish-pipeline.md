@@ -42,9 +42,9 @@ Steps:
    - `scope` set to the package's npm scope.
    - `cache: 'npm'`.
 3. `npm ci` — install dependencies needed by `prepublishOnly` (publint, Prettier).
-4. `npm publish`. The job sets `NODE_AUTH_TOKEN` from `secrets.GITHUB_TOKEN` so the publish call authenticates against GitHub Packages using the workflow's automatically-issued token. No long-lived PAT is required.
+4. A shell publish step reads the manifest version. Stable versions run `npm publish --provenance`; prerelease versions derive the channel from the text between the first `-` and the next `.` and run `npm publish --provenance --tag "$CHANNEL"`. The job sets `NODE_AUTH_TOKEN` from `secrets.GITHUB_TOKEN` so the publish call authenticates against GitHub Packages using the workflow's automatically-issued token. No long-lived PAT is required.
 
-The `prepublishOnly` script in `package.json` runs the verify chain locally inside the job before npm uploads the tarball. This is the third layer of verification (CI on PR, CI on tag verify, prepublishOnly inside publish) — redundant by design.
+The `prepublishOnly` script in `package.json` runs the verify chain locally inside the job before npm uploads the tarball. This is the third layer of verification (CI on PR, CI on tag verify, prepublishOnly inside publish) — redundant by design. The publish job grants `id-token: write` in addition to `contents: read` and `packages: write`; provenance is mandatory under Spec 13.
 
 ## Step 6 — Publishing to npmjs.org instead
 
@@ -80,3 +80,11 @@ The workflow itself produces no Slack/Discord/email notifications. Notifications
 3. Push the commit and the tag to `origin`.
 4. Watch the publish workflow run. The three-job chain provides clear failure boundaries.
 5. On success, the registry hosts the new version; consumers can upgrade.
+
+## Acceptance criteria
+
+- Only a pushed `v*` tag starts the workflow, and `verify`, `check-version`, and `publish` run sequentially.
+- A tag whose leading-`v` value differs from `package.json.version` fails before registry credentials are used.
+- Stable versions publish with provenance and no explicit dist-tag; prereleases publish with provenance under the channel derived from the semver prerelease identifier.
+- Only the publish job has `packages: write` and `id-token: write`; installation and publishing receive tokens through environment variables without logging them.
+- A verification, version, provenance, authentication, or registry failure prevents a successful release and never falls back to an unsigned publish.

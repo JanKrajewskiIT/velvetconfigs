@@ -21,6 +21,7 @@ The factory MUST:
 
 ## Step 3 — Options bag (default values)
 
+- `projectRoot` — root used to resolve `srcDir` and linked-workspace paths. Default `process.cwd()`.
 - `alias` — alias token. Default `'~'`. Pass `null` to skip aliasing.
 - `srcDir` — source directory the alias targets. Default `'src'`.
 - `port` — dev server port. When provided, `server.port` AND `preview.port` are set to the same value so dev and preview environments agree.
@@ -42,7 +43,7 @@ The factory accepts an `apiProxy` option that wires Vite's dev-server proxy to a
 - `path` — the proxy path prefix. Default `'/api'`.
 - `changeOrigin` — default `true`.
 - `secure` — default `false`.
-- `rewrite` — either a custom rewrite function, or `false` to disable rewriting, or unset to use a default rewrite that strips the proxy path prefix from the forwarded request.
+- `rewrite` — either a custom `(path: string) => string` function, or `false` to disable rewriting, or unset to use a default rewrite that strips the escaped proxy path prefix from the start of the forwarded request. For the default path, `/api/users` becomes `/users`.
 
 The factory composes these inputs into Vite's `server.proxy[path]` shape.
 
@@ -53,8 +54,8 @@ A second optional behavior supports developing a sibling workspace package (e.g.
 - `enabled` flag.
 - `workspacePath` (required when enabled) — absolute or relative path to the sibling workspace root.
 - `packageName` (required when enabled) — the sibling package's name (e.g. `@scope/ui`).
-- `fileAliases` — array of strings or `{ from, local }` objects. For each entry, the factory aliases `<workspaceNodeModules>/<from>` to a local path (defaulting to `<localNodeModules>/<from>`). This prevents duplicate copies of shared peer dependencies when the sibling is consumed via `npm link` or path resolution.
-- `dedupe` — array fed into `resolve.dedupe`.
+- `fileAliases` — array of strings or `{ from, local? }` objects. `find` resolves to `<workspacePath>/node_modules/<from>`. A string or omitted `local` resolves `replacement` to `<projectRoot>/node_modules/<from>`; an explicit `local` is used verbatim as the replacement.
+- `dedupe` — array fed into `resolve.dedupe`; default `[]`.
 - `optimizeDepsInclude` and `optimizeDepsExclude` — defaults: include is empty; exclude defaults to the sibling package name to keep Vite from prebundling the linked source.
 
 The factory also extends `server.fs.allow` with both the project root and the workspace path so Vite serves files outside the project root.
@@ -83,6 +84,16 @@ Type-only re-exports from `vite-plugin-solid` (the Solid plugin's options) and `
 
 The exports map exposes `./vite` as a conditional export with `types` pointing at `vite/index.d.mts` and `import` pointing at `vite/index.mjs`. The library factory shares the same subpath; see Spec 07.
 
+The single module also exports the library factory and its public `readPeerDependencies` helper defined in Spec 07. These are one public module surface, not separate app/lib subpaths.
+
 ## Step 9 — Consumer wiring
 
 A consumer's `vite.config.ts` returns the factory result inside `defineConfig`, optionally inside an `({ mode }) => ...` thunk so `loadEnv` can be called for the `apiProxy.env` field. The factory itself is environment-agnostic and does not call `loadEnv` internally.
+
+## Acceptance criteria
+
+- With no options, the result has one Solid plugin and resolves `~` to `<cwd>/src`; `alias: null` removes the preset alias.
+- Port, host, proxy target precedence, proxy rewrite modes, and linked-workspace defaults produce the exact Vite fields described above.
+- Enabling a linked workspace without either required field throws before returning a config.
+- User config is merged last, then duplicate entries are removed from `optimizeDeps.include`, `optimizeDeps.exclude`, and `resolve.dedupe` while first-occurrence order is preserved.
+- Runtime exports and `.d.mts` declarations expose the same option and return contracts.
