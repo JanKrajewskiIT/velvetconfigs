@@ -1,5 +1,4 @@
 *                      @jankrajewskiit
-
 eslint/                @jankrajewskiit
 vite/                  @jankrajewskiit
 stylelint/             @jankrajewskiit
@@ -7,9 +6,7 @@ prettier/              @jankrajewskiit
 tsconfig/              @jankrajewskiit
 nginx/                 @jankrajewskiit
 husky/                 @jankrajewskiit
-lint-staged/           @jankrajewskiit
-
+lint-staged/            @jankrajewskiit
 .github/workflows/     @jankrajewskiit
 .github/dependabot.yml @jankrajewskiit
-
 specs/                 @jankrajewskiit

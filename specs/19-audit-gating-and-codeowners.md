@@ -44,6 +44,7 @@ nginx/                 @jankrajewskiit
 husky/                 @jankrajewskiit
 lint-staged/           @jankrajewskiit
 .github/workflows/     @jankrajewskiit
+.github/dependabot.yml @jankrajewskiit
 specs/                 @jankrajewskiit
 ```
 

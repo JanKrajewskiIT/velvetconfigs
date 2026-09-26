@@ -1,58 +1,50 @@
-import { defineConfig, globalIgnores } from 'eslint/config';
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import solid from 'eslint-plugin-solid/configs/typescript';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
+import eslint from '@eslint/js';
+import eslintConfigPrettier from 'eslint-config-prettier';
 import cssModules from 'eslint-plugin-css-modules';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import solid from 'eslint-plugin-solid';
 import unusedImports from 'eslint-plugin-unused-imports';
-import prettierConfig from 'eslint-config-prettier';
 import globals from 'globals';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import typescriptEslint from 'typescript-eslint';
 
 const DEFAULT_IGNORES = ['**/dist/**', '**/build/**', '**/coverage/**', '**/*.d.ts', '**/vite-env.d.ts'];
-
-const DEFAULT_TYPED_FILES_BROWSER = ['src/**/*.{ts,tsx,js,jsx}'];
-const DEFAULT_TYPED_FILES_NODE = ['src/**/*.{ts,js}'];
-
+const DEFAULT_BROWSER_FILES = ['src/**/*.{ts,tsx,js,jsx}'];
+const DEFAULT_NODE_FILES = ['src/**/*.{ts,js}'];
 const DEFAULT_TEST_FILES = [
   '**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs}',
   '**/__tests__/**/*.{ts,tsx,js,jsx,mjs,cjs}',
   '**/test/**/*.{ts,tsx,js,jsx,mjs,cjs}',
 ];
-
 const CONFIG_FILES = ['**/*.{mjs,cjs,mts,cts}', '**/*.config.{js,ts,mjs,cjs}'];
-
-const SUPPORTED_ENVIRONMENTS = {
+const ENVIRONMENT_GLOBALS = {
   browser: globals.browser,
-  node: globals.nodeBuiltin ?? globals.node,
+  node: globals.node,
   worker: globals.worker,
   serviceworker: globals.serviceworker,
   jest: globals.jest,
-  vitest: globals.vitest ?? {},
+  vitest: globals.vitest,
 };
 
-function mergeGlobals(environments) {
-  const merged = {};
-  for (const token of environments) {
-    const set = SUPPORTED_ENVIRONMENTS[token];
-    if (!set) {
-      throw new Error(`Unknown environment "${token}". Supported: ${Object.keys(SUPPORTED_ENVIRONMENTS).join(', ')}.`);
+const validateOptions = (options) => {
+  if (typeof options?.tsconfigRootDir !== 'string' || options.tsconfigRootDir.length === 0) {
+    throw new TypeError('tsconfigRootDir must be a non-empty string.');
+  }
+};
+
+const mergeGlobals = (environments) =>
+  environments.reduce((mergedGlobals, environment) => {
+    const environmentGlobals = ENVIRONMENT_GLOBALS[environment];
+
+    if (!environmentGlobals) {
+      throw new TypeError(`Unsupported ESLint environment: ${environment}`);
     }
-    Object.assign(merged, set);
-  }
-  return merged;
-}
 
-function requireTsconfigRootDir(value) {
-  if (!value || typeof value !== 'string') {
-    throw new Error(
-      'createEslintConfig: tsconfigRootDir is required. Pass an absolute path to the directory containing tsconfig.json (typically `import.meta.dirname`).',
-    );
-  }
-  return value;
-}
+    return { ...mergedGlobals, ...environmentGlobals };
+  }, {});
 
-const COMMON_RULES = {
+const createCommonRules = (allowConsoleWarnError) => ({
   'simple-import-sort/imports': 'error',
   'simple-import-sort/exports': 'error',
   'unused-imports/no-unused-imports': 'error',
@@ -74,9 +66,10 @@ const COMMON_RULES = {
   '@typescript-eslint/no-confusing-void-expression': 'off',
   '@typescript-eslint/no-unsafe-type-assertion': 'off',
   'require-unicode-regexp': ['error', { requireFlag: 'u' }],
-};
+  'no-console': allowConsoleWarnError ? ['error', { allow: ['warn', 'error'] }] : 'error',
+});
 
-const TEST_RELAXATIONS = {
+const TEST_RULES = {
   '@typescript-eslint/no-unsafe-assignment': 'off',
   '@typescript-eslint/no-unsafe-member-access': 'off',
   '@typescript-eslint/no-unsafe-call': 'off',
@@ -88,157 +81,164 @@ const TEST_RELAXATIONS = {
   'no-console': 'off',
 };
 
-function consoleRule(allowConsoleWarnError) {
-  if (allowConsoleWarnError === false) {
-    return ['error'];
-  }
-  return ['error', { allow: ['warn', 'error'] }];
-}
+const createConfigFilesLayer = () => ({
+  ...typescriptEslint.configs.disableTypeChecked,
+  files: CONFIG_FILES,
+  languageOptions: {
+    ...typescriptEslint.configs.disableTypeChecked.languageOptions,
+    globals: globals.node,
+  },
+});
 
-export function createEslintConfig(options = {}) {
-  const tsconfigRootDir = requireTsconfigRootDir(options.tsconfigRootDir);
-  const environments = options.environments ?? ['browser'];
-  const typedFiles = options.typedFiles ?? DEFAULT_TYPED_FILES_BROWSER;
-  const testFiles = options.testFiles ?? DEFAULT_TEST_FILES;
-  const ignorePaths = [...DEFAULT_IGNORES, ...(options.ignorePaths ?? [])];
-  const extraConfigs = options.extraConfigs ?? [];
-  const allowConsoleWarnError = options.allowConsoleWarnError;
+export const createEslintConfig = (options) => {
+  validateOptions(options);
 
-  const typedGlobals = mergeGlobals(environments);
+  const {
+    typedFiles = DEFAULT_BROWSER_FILES,
+    testFiles = DEFAULT_TEST_FILES,
+    environments = ['browser'],
+    ignorePaths = [],
+    extraConfigs = [],
+    allowConsoleWarnError = true,
+    tsconfigRootDir,
+  } = options;
 
-  return defineConfig([
-    js.configs.recommended,
+  return defineConfig(
+    eslint.configs.recommended,
     jsxA11y.flatConfigs.recommended,
-    ...tseslint.configs.strictTypeChecked,
-    solid,
-    prettierConfig,
-    globalIgnores(ignorePaths),
+    ...typescriptEslint.configs.strictTypeChecked,
+    solid.configs['flat/typescript'],
+    eslintConfigPrettier,
+    globalIgnores([...DEFAULT_IGNORES, ...ignorePaths]),
+    createConfigFilesLayer(),
     {
-      files: CONFIG_FILES,
-      languageOptions: {
-        globals: { ...globals.nodeBuiltin },
-      },
-      ...tseslint.configs.disableTypeChecked,
-    },
-    {
-      files: typedFiles,
+      files: [...typedFiles],
       languageOptions: {
         parserOptions: {
           projectService: true,
           tsconfigRootDir,
         },
-        globals: typedGlobals,
+        globals: mergeGlobals(environments),
       },
       plugins: {
-        'unused-imports': unusedImports,
-        'simple-import-sort': simpleImportSort,
         'css-modules': cssModules,
+        'simple-import-sort': simpleImportSort,
+        'unused-imports': unusedImports,
       },
       rules: {
-        ...COMMON_RULES,
-        'css-modules/no-undef-class': ['warn', { camelCase: true }],
+        ...createCommonRules(allowConsoleWarnError),
+        'css-modules/no-undef-class': 'warn',
         'css-modules/no-unused-class': ['warn', { camelCase: true }],
-        'no-console': consoleRule(allowConsoleWarnError),
         'solid/reactivity': 'warn',
       },
     },
     {
-      files: testFiles,
-      rules: TEST_RELAXATIONS,
+      files: [...testFiles],
+      rules: TEST_RULES,
     },
     ...extraConfigs,
-  ]);
-}
+  );
+};
 
-export function createNodeEslintConfig(options = {}) {
-  const tsconfigRootDir = requireTsconfigRootDir(options.tsconfigRootDir);
-  const typedFiles = options.typedFiles ?? DEFAULT_TYPED_FILES_NODE;
-  const testFiles = options.testFiles ?? DEFAULT_TEST_FILES;
-  const ignorePaths = [...DEFAULT_IGNORES, ...(options.ignorePaths ?? [])];
-  const extraConfigs = options.extraConfigs ?? [];
-  const allowConsoleWarnError = options.allowConsoleWarnError;
+export const createNodeEslintConfig = (options) => {
+  validateOptions(options);
 
-  return defineConfig([
-    js.configs.recommended,
-    ...tseslint.configs.strictTypeChecked,
-    prettierConfig,
-    globalIgnores(ignorePaths),
+  const {
+    typedFiles = DEFAULT_NODE_FILES,
+    testFiles = DEFAULT_TEST_FILES,
+    ignorePaths = [],
+    extraConfigs = [],
+    allowConsoleWarnError = true,
+    tsconfigRootDir,
+  } = options;
+
+  return defineConfig(
+    eslint.configs.recommended,
+    ...typescriptEslint.configs.strictTypeChecked,
+    eslintConfigPrettier,
+    globalIgnores([...DEFAULT_IGNORES, ...ignorePaths]),
+    createConfigFilesLayer(),
     {
-      files: CONFIG_FILES,
-      languageOptions: {
-        globals: { ...globals.nodeBuiltin },
-      },
-      ...tseslint.configs.disableTypeChecked,
-    },
-    {
-      files: typedFiles,
+      files: [...typedFiles],
       languageOptions: {
         parserOptions: {
           projectService: true,
           tsconfigRootDir,
         },
-        globals: { ...globals.nodeBuiltin },
+        globals: globals.node,
       },
       plugins: {
-        'unused-imports': unusedImports,
         'simple-import-sort': simpleImportSort,
+        'unused-imports': unusedImports,
       },
-      rules: {
-        ...COMMON_RULES,
-        'no-console': consoleRule(allowConsoleWarnError),
-      },
+      rules: createCommonRules(allowConsoleWarnError),
     },
     {
-      files: testFiles,
-      rules: TEST_RELAXATIONS,
+      files: [...testFiles],
+      rules: TEST_RULES,
     },
     ...extraConfigs,
-  ]);
-}
+  );
+};
 
-export function buildNoChildrenPropSelectors(entries) {
-  const selectors = [];
-  for (const entry of entries) {
-    const { component, prop, forbid } = entry;
-    if (!component || !prop || !Array.isArray(forbid)) {
-      throw new Error('buildNoChildrenPropSelectors: each entry must have { component, prop, forbid: [...] }.');
+export const buildNoChildrenPropSelectors = (entries) =>
+  entries.flatMap((entry) => {
+    if (typeof entry?.component !== 'string' || entry.component.length === 0) {
+      throw new TypeError('component must be a non-empty string.');
     }
-    if (forbid.includes('children')) {
+
+    if (typeof entry.prop !== 'string' || entry.prop.length === 0) {
+      throw new TypeError('prop must be a non-empty string.');
+    }
+
+    if (!Array.isArray(entry.forbid)) {
+      throw new TypeError('forbid must be an array.');
+    }
+
+    const component = JSON.stringify(entry.component);
+    const selectors = [];
+
+    if (entry.forbid.includes('children')) {
       selectors.push({
-        selector: `JSXElement[openingElement.name.name='${component}'][openingElement.selfClosing=false]`,
-        message: `Pass content via the "${prop}" prop on <${component}/> instead of children.`,
+        selector: `JSXOpeningElement[name.name=${component}][selfClosing=false]`,
+        message: `Use the ${entry.prop} prop instead of children on ${entry.component}.`,
       });
     }
-    if (forbid.includes('title')) {
+
+    if (entry.forbid.includes('title')) {
       selectors.push({
-        selector: `JSXAttribute[name.name='title'][parent.name.name='${component}']`,
-        message: `Use the "${prop}" prop on <${component}/> instead of the title attribute.`,
+        selector: `JSXOpeningElement[name.name=${component}] > JSXAttribute[name.name='title']`,
+        message: `Use the ${entry.prop} prop instead of title on ${entry.component}.`,
       });
     }
+
+    return selectors;
+  });
+
+export const buildNoChildrenPropRule = (entries) => ['error', ...buildNoChildrenPropSelectors(entries)];
+
+export const buildLiteralI18nKeySelectors = ({ dynamicFunction = 't', staticFunction = 'ts' } = {}) => {
+  if (typeof dynamicFunction !== 'string' || dynamicFunction.length === 0) {
+    throw new TypeError('dynamicFunction must be a non-empty string.');
   }
-  return selectors;
-}
 
-export function buildLiteralI18nKeySelectors(options = {}) {
-  const dynamic = options.dynamicFunction ?? 't';
-  const staticFn = options.staticFunction ?? 'ts';
-  const message = `Use ${staticFn}('key') for compile-time-known keys; ${dynamic}() is for dynamic lookups.`;
+  if (typeof staticFunction !== 'string' || staticFunction.length === 0) {
+    throw new TypeError('staticFunction must be a non-empty string.');
+  }
+
+  const dynamicFunctionName = JSON.stringify(dynamicFunction);
+  const message = `Use ${staticFunction}() for compile-time-known translation keys.`;
+
   return [
     {
-      selector: `CallExpression[callee.name='${dynamic}'] > Literal:first-child`,
+      selector: `CallExpression[callee.name=${dynamicFunctionName}] > Literal:first-child`,
       message,
     },
     {
-      selector: `CallExpression[callee.name='${dynamic}'] > TemplateLiteral:first-child[expressions.length=0]`,
+      selector: `CallExpression[callee.name=${dynamicFunctionName}] > TemplateLiteral[expressions.length=0]:first-child`,
       message,
     },
   ];
-}
+};
 
-export function buildNoChildrenPropRule(entries) {
-  return ['error', ...buildNoChildrenPropSelectors(entries)];
-}
-
-export function buildLiteralI18nKeyRule(options) {
-  return ['error', ...buildLiteralI18nKeySelectors(options)];
-}
+export const buildLiteralI18nKeyRule = (options) => ['error', ...buildLiteralI18nKeySelectors(options)];

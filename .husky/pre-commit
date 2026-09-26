@@ -1,2 +1,2 @@
-hook_dir="$(cd "$(dirname "$0")" && pwd)"
+hook_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 . "$hook_dir/../husky/pre-commit.sh"

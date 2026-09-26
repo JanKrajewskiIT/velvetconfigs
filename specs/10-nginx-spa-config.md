@@ -21,14 +21,14 @@ At the server-block level, set the following headers with `always` so they apply
 - `X-Content-Type-Options: nosniff` — disables MIME sniffing.
 - `X-Frame-Options: DENY` — blocks clickjacking via iframe embedding.
 - `Referrer-Policy: strict-origin-when-cross-origin` — leaks only the origin on cross-origin requests, full URL on same-origin.
-- A baseline Content Security Policy that restricts default sources to self; permits inline styles (required by CSS Modules build outputs and some bundlers); permits images from self, data URIs, and blob URLs (for runtime-generated assets like base64 thumbnails); disallows framing.
+- A baseline Content Security Policy that restricts default sources to self; permits inline styles (required by CSS Modules build outputs and some bundlers); permits images from self, data URIs, and blob URLs (for runtime-generated assets like base64 thumbnails); disallows objects and framing; and restricts form submissions to self.
 
 ## Step 4 — Compression
 
 Enable gzip compression for the SPA's text-like asset types:
 
 - `gzip on`, `gzip_vary on`, `gzip_proxied any`, `gzip_comp_level 6`, `gzip_min_length 256`.
-- `gzip_types` enumerates plain text, CSS, JavaScript, JSON, XML, WASM, woff2, and SVG. Pre-compressed binary formats (PNG, woff/woff2 already compressed at the file level) gain nothing from on-the-fly gzip.
+- `gzip_types` enumerates plain text, CSS, both `text/javascript` and `application/javascript`, JSON, XML, WASM, woff2, and SVG. Pre-compressed binary formats (PNG, woff/woff2 already compressed at the file level) gain nothing from on-the-fly gzip.
 
 The compression level is chosen to balance CPU and ratio. Higher levels yield diminishing returns for typical bundles.
 

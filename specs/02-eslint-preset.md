@@ -18,9 +18,9 @@ Exports:
 
 The factories accept overrides but ship sensible defaults:
 
-- Default ignores cover `dist`, `build`, `coverage`, all `.d.ts` files, and the Vite environment shim `vite-env.d.ts`.
+- Default ignores recursively cover `dist`, `build`, and `coverage` directories, all `.d.ts` files, and the Vite environment shim `vite-env.d.ts`.
 - Default typed-file glob targets `src/**/*.{ts,tsx,js,jsx}`. The Node factory uses `src/**/*.{ts,js}` because there is no JSX.
-- Default test-file glob covers `**/*.{test,spec}.*`, `**/__tests__/**`, and `**/test/**` across the TypeScript/JavaScript extensions.
+- Default test-file globs cover `**/*.{test,spec}.*`, `**/__tests__/**`, and `**/test/**` across the TypeScript/JavaScript extensions, including `.mjs` and `.cjs`.
 
 Consumers may extend ignores via an `ignorePaths` option that is concatenated with the defaults rather than replacing them.
 
@@ -40,7 +40,7 @@ The flat-config array assembled by `createEslintConfig` MUST be ordered as follo
 4. Solid plugin TypeScript flat-config preset.
 5. `eslint-config-prettier` (last among presets so it can disable stylistic rules introduced earlier).
 6. A `globalIgnores` entry combining defaults and consumer-provided paths.
-7. A "config files" layer matching `*.{mjs,cjs,mts,cts}` and `*.config.{js,ts,mjs,cjs}`. This layer applies Node globals and disables type-checked rules via typescript-eslint's `disableTypeChecked`. Without this, running ESLint over the consumer's own `eslint.config.mjs` would fail type lookups.
+7. A "config files" layer recursively matching `**/*.{mjs,cjs,mts,cts}` and `**/*.config.{js,ts,mjs,cjs}`. This layer applies Node globals and disables type-checked rules via typescript-eslint's `disableTypeChecked`. Without this, running ESLint over nested workspace configuration files would fail type lookups.
 8. The typed-source layer:
    - `files` set from the `typedFiles` option.
    - `languageOptions.parserOptions.projectService = true` and `tsconfigRootDir = options.tsconfigRootDir`. This enables project-service-based type-aware linting without forcing the consumer to maintain a static `parserOptions.project` array.
@@ -57,7 +57,7 @@ The typed layer must enable:
 - `simple-import-sort/imports` and `.../exports` as errors. The two-rule combo replaces ESLint's built-in import ordering.
 - `unused-imports/no-unused-imports` as error.
 - `unused-imports/no-unused-vars` as error with `vars: 'all'`, `args: 'after-used'`, and a `^_` ignore pattern so prefixing with underscore opts out.
-- Several typescript-eslint strict rules toned down to suit Solid idioms (return-type inference left to TS, unnecessary-type-arguments off, unnecessary-condition warn, misused-promises warn, restrict-template-expressions off, no-confusing-void-expression off, no-unsafe-type-assertion off).
+- Several typescript-eslint strict rules toned down to suit Solid idioms (explicit function and module-boundary return types left to TS, unnecessary-type-arguments off, unnecessary-condition warn, misused-promises warn, restrict-template-expressions off, no-confusing-void-expression off, no-unsafe-type-assertion off).
 - `require-unicode-regexp` with `requireFlag: 'u'` to make Unicode flags mandatory.
 - `css-modules/no-undef-class` as warning and `css-modules/no-unused-class` as warning with camelCase awareness.
 - `no-console`: by default `['error', { allow: ['warn', 'error'] }]`. Setting `allowConsoleWarnError: false` upgrades it to error for all log levels.

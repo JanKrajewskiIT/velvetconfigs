@@ -72,14 +72,14 @@ The audited dependency ranges are part of the reproducible baseline:
 | `eslint-config-prettier`           | `^10.1.8`  |
 | `eslint-plugin-css-modules`        | `^2.12.0`  |
 | `eslint-plugin-jsx-a11y`           | `^6.10.2`  |
-| `eslint-plugin-simple-import-sort` | `^13.0.0`  |
-| `eslint-plugin-solid`              | `^0.14.5`  |
+| `eslint-plugin-simple-import-sort` | `^14.0.0`  |
+| `eslint-plugin-solid`              | `^0.18.0`  |
 | `eslint-plugin-unused-imports`     | `^4.4.1`   |
-| `globals`                          | `^17.6.0`  |
+| `globals`                          | `^17.12.0` |
 | `stylelint-config-standard`        | `^40.0.0`  |
-| `typescript-eslint`                | `^8.61.0`  |
-| `vite-plugin-dts`                  | `^5.0.2`   |
-| `vite-plugin-solid`                | `^2.11.12` |
+| `typescript-eslint`                | `^8.70.1`  |
+| `vite-plugin-dts`                  | `^5.1.1`   |
+| `vite-plugin-solid`                | `^2.11.14` |
 
 Runtime peer ranges are `eslint >=9.0.0`, `lint-staged >=17.0.0`, `prettier >=3.0.0`, `stylelint >=17.0.0`, `typescript >=5.5.0`, and `vite >=6.0.0`.
 
@@ -92,7 +92,7 @@ Strictly limited to:
 - `husky` — installs the package's own Git hooks.
 - `publint` — validates the published artifact during the verify pipeline.
 
-The audited dev ranges are `husky ^9.1.7`, `lint-staged ^17.0.7`, `prettier ^3.8.4`, and `publint ^0.3.21`. The committed lockfile is required for reproducible `npm ci`; a clean-room implementation may regenerate it from these direct ranges rather than copy legacy transitive structure.
+The audited dev ranges are `husky ^9.1.7`, `lint-staged ^17.5.1`, `prettier ^3.9.9`, and `publint ^0.3.24`. The committed lockfile is required for reproducible `npm ci`; a clean-room implementation may regenerate it from these direct ranges rather than copy legacy transitive structure.
 
 ## Step 6 — Exports map
 

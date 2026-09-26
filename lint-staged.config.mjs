@@ -1,3 +1,3 @@
 export default {
-  '*.{json,md,yml,yaml,mjs,cjs}': ['prettier --write'],
+  '*.{json,md,mjs,mts,cjs,yml,yaml}': ['prettier --write'],
 };

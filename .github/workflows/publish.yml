@@ -1,4 +1,4 @@
-name: publish
+name: Publish
 
 on:
   push:
@@ -19,16 +19,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Compare tag with package.json version
+      - name: Check package version
+        shell: bash
         run: |
-          PKG_VERSION="$(node -p "require('./package.json').version")"
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
-            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)."
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION=${GITHUB_REF_NAME#v}
+          if [[ "$PACKAGE_VERSION" != "$TAG_VERSION" ]]; then
+            echo "::error::package.json version $PACKAGE_VERSION does not match tag $GITHUB_REF_NAME"
             exit 1
           fi
-          echo "Version OK: $PKG_VERSION"
 
   publish:
     needs: check-version
@@ -40,32 +39,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 26.x
-          registry-url: 'https://npm.pkg.github.com'
+          registry-url: https://npm.pkg.github.com
           scope: '@jankrajewskiit'
-          cache: 'npm'
-
-      - name: Install
+          cache: npm
+      - name: Install dependencies
         run: npm ci
+      - name: Publish package
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish
         run: |
-          PKG_VERSION="$(node -p "require('./package.json').version")"
-          case "$PKG_VERSION" in
-            *-*)
-              CHANNEL="${PKG_VERSION#*-}"
-              CHANNEL="${CHANNEL%%.*}"
-              npm publish --provenance --tag "$CHANNEL"
-              ;;
-            *)
-              npm publish --provenance
-              ;;
-          esac
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "$VERSION" == *-* ]]; then
+            CHANNEL=${VERSION#*-}
+            CHANNEL=${CHANNEL%%.*}
+            npm publish --provenance --tag "$CHANNEL"
+          else
+            npm publish --provenance
+          fi
