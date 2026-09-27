@@ -158,8 +158,9 @@ After regenerating the lockfile, the maintainer MUST run the full verify pipelin
 npm run verify
 ```
 
-This chains `format:check` and `publint` (Spec 14 Step 2). A passing `verify` proves:
+This chains `lint`, `format:check`, and `publint` (Spec 14 Step 2). A passing `verify` proves:
 
+- ESLint accepts the repository's JavaScript modules under the new dependency versions.
 - Prettier still accepts every tracked file under the new dependency versions.
 - The exports map still resolves under the new `publint` major (if `publint` itself was bumped).
 

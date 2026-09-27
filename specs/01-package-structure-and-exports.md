@@ -134,9 +134,9 @@ Test fixtures, the package's own lint-staged config, the GitHub Actions director
 - `"keywords"` enumerates each tool ecosystem the package supports (`eslint-config`, `prettier-config`, `stylelint-config`, `tsconfig`, `vite-config`, `solidjs`, `lint-staged`, `husky`, `nginx`). Keywords drive registry discoverability.
 - `"description"` is a single sentence that names the supported tools and the target framework (SolidJS apps and libraries).
 - The exact audited description is `Shared tooling presets (ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky, Nginx) for SolidJS apps and libraries.`
-- `"scripts"` are limited to: format, format-check, verify, prepublishOnly (chained to verify), and prepare (installs Husky hooks). No build step is required because every artifact is hand-authored.
+- `"scripts"` are limited to: lint, lint-fix, format, format-check, verify, prepublishOnly (chained to verify), and prepare (installs Husky hooks). No build step is required because every artifact is hand-authored.
 
-The script values are exactly `prettier --write .`, `prettier --check .`, `npm run format:check && publint`, `npm run verify`, and `husky`, respectively.
+The script values are exactly `eslint .`, `eslint . --fix`, `prettier --write .`, `prettier --check .`, `npm run lint && npm run format:check && publint`, `npm run verify`, and `husky`, respectively.
 
 ## Step 9 — Self-validation hooks
 

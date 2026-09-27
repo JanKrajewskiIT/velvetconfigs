@@ -155,7 +155,7 @@ If a consumer imports the types without having `eslint` installed, TypeScript su
 
 ## Step 15 — Self-hosting
 
-The repository does not lint its own ESLint preset (Spec 14 Step 1). The `.d.mts` is therefore not validated by an internal type-check. Validation comes from:
+The repository lints its JavaScript modules through a repo-local flat config (Spec 14 Step 1). It does not consume the published factory because doing so would create a self-dependency. The `.d.mts` is not covered by the JavaScript lint run and is not validated by an internal type-check. Declaration validation comes from:
 
 - `publint` (Spec 14 Step 8) checks that the `types` condition resolves to an existing file.
 - An optional `arethetypeswrong` check MAY be added to the verify pipeline; if added, it MUST run after `publint` and treat its findings as advisory until the preset stabilizes.

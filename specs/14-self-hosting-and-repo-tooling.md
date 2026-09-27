@@ -4,9 +4,9 @@
 
 The repository that produces the presets MUST consume them where reasonable. Self-hosting catches regressions early: a Prettier change that breaks consumer formatting also breaks the package's own format-check; an exports-map error caught by publint blocks publish.
 
-The package does not consume presets for which this repository has no matching source workload:
+The package consumes its presets where the repository has a matching source workload:
 
-- ESLint — running the published ESLint factory over the package's own source would force the package to depend on its own published version (a chicken-and-egg problem on first publish). The package may add ESLint locally if and when its own source justifies it, but it is not required.
+- ESLint — the repository lints its JavaScript modules through `eslint.config.mjs`. It does not consume the published factory because that would force the package to depend on its own published version during development.
 - Stylelint — the package contains no CSS to lint.
 - TypeScript — the package contains no compiled TypeScript implementation. Its `.d.mts` files are hand-authored declarations and are not emitted or type-checked by a repository build.
 - Vite — the package itself is not bundled.
@@ -17,9 +17,11 @@ The package DOES consume its own Prettier preset, its own lint-staged config (a 
 
 The `scripts` block in `package.json` MUST define:
 
+- `lint` — runs `eslint .` against the repository's JavaScript modules.
+- `lint:fix` — runs `eslint . --fix` to apply safe ESLint fixes.
 - `format` — runs `prettier --write .` against the repository.
 - `format:check` — runs `prettier --check .` against the repository. CI uses this script.
-- `verify` — chains `format:check` and `publint`. This is the single command that gates publish and CI.
+- `verify` — chains `lint`, `format:check`, and `publint`. This is the single command that gates publish and CI.
 - `prepublishOnly` — runs `verify`. Prevents manual `npm publish` from skipping validation.
 - `prepare` — runs `husky`. Installs the package's pre-commit hook on `npm install`.
 
@@ -32,7 +34,7 @@ No `build` script exists. Every shipping artifact is hand-authored; there is no 
 
 ## Step 4 — Repository lint-staged config
 
-The repository's own `lint-staged.config.mjs` is intentionally NARROWER than the preset it ships. The repository contains only configuration files, JSON, Markdown, and shell scripts; running ESLint or Stylelint on those is unnecessary. The repo config matches the relevant extensions and runs `prettier --write` against them.
+The repository's own `lint-staged.config.mjs` is intentionally NARROWER than the preset it ships. Manual ESLint scripts cover the JavaScript modules, while the staged-file hook remains formatting-only. The repo config matches the relevant extensions and runs `prettier --write` against them.
 
 The repository does NOT default-export the published preset for its own lint-staged config, because the published preset assumes a typical SolidJS app/library layout (sources under `src/`, CSS Modules, etc.) which the repo does not have.
 

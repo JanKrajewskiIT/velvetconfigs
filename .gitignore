@@ -20,9 +20,11 @@ Thumbs.db
 /.cursor/permissions.json
 /.vscode/settings.json
 
+/AGENTS.md
+/CLAUDE.md
 /.claude
 /.codex
 /.cursor
-/.github/skills/
-/AGENTS.md
-/CLAUDE.md
+/.github/skills
+/.github/instructions
+/.vscode/settings.json

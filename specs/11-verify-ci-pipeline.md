@@ -68,7 +68,7 @@ Outside the workflow files themselves, the repository settings MUST require:
 
 ## Step 9 — Local parity
 
-Running `npm run verify` locally produces the same result as the CI verify step. Developers can — and SHOULD — run it before pushing. The pre-commit hook (Spec 09) catches formatting drift; the verify script catches packaging drift (publint).
+Running `npm run verify` locally produces the same result as the CI verify step. Developers can — and SHOULD — run it before pushing. The pre-commit hook (Spec 09) catches formatting drift; the verify script catches lint, formatting, and packaging drift.
 
 The local command does not include `npm ci` or `npm audit`; local parity here refers only to the final `npm run verify` step. A complete local reproduction also requires the install and audit commands from Step 4.
 
@@ -77,4 +77,4 @@ The local command does not include `npm ci` or `npm audit`; local parity here re
 - `ci.yml` triggers only for pushes and pull requests targeting `main` and delegates its sole job to `verify.yml`.
 - A reusable-workflow run on Node `26.x` uses `actions/checkout@v6` and `actions/setup-node@v6`, then performs `npm ci`, hard-gates `npm audit --audit-level=high`, and runs `npm run verify` in that order.
 - The verify job has only `contents: read` and `packages: read`; an optional `GHCR_TOKEN` is forwarded only to package installation and is never printed.
-- A failed install, audit, format check, or publint check fails the reusable workflow.
+- A failed install, audit, lint, format check, or publint check fails the reusable workflow.
