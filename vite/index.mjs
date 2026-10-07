@@ -1,215 +1,238 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import path from 'node:path';
 
-import { mergeConfig } from 'vite';
-import solid from 'vite-plugin-solid';
+import { mergeConfig, normalizePath } from 'vite';
+import solidPlugin from 'vite-plugin-solid';
 
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+const DEFAULT_ALIAS = '~';
+const DEFAULT_SRC_DIR = 'src';
+const DEFAULT_API_PROXY_ENV_VAR = 'VITE_API_BASE_URL';
+const DEFAULT_API_PROXY_PATH = '/api';
+const DEFAULT_API_PROXY_TARGET = 'http://localhost:5000';
+const DEFAULT_LIB_FORMATS = ['es'];
+const DEFAULT_LIB_TARGET = 'esnext';
+const REQUIRED_LINKED_WORKSPACE_FIELDS = ['workspacePath', 'packageName'];
+const DEDUPED_ARRAY_PATHS = [
+  ['optimizeDeps', 'include'],
+  ['optimizeDeps', 'exclude'],
+  ['resolve', 'dedupe'],
+];
 
-const deduplicateMergedDependencies = (config) => ({
-  ...config,
-  ...(config.optimizeDeps
-    ? {
-        optimizeDeps: {
-          ...config.optimizeDeps,
-          ...(config.optimizeDeps.include ? { include: [...new Set(config.optimizeDeps.include)] } : {}),
-          ...(config.optimizeDeps.exclude ? { exclude: [...new Set(config.optimizeDeps.exclude)] } : {}),
-        },
-      }
-    : {}),
-  ...(config.resolve?.dedupe
-    ? {
-        resolve: {
-          ...config.resolve,
-          dedupe: [...new Set(config.resolve.dedupe)],
-        },
-      }
-    : {}),
-});
+const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
 
-const createAlias = (projectRoot, alias, srcDir) =>
-  alias === null ? [] : [{ find: alias, replacement: resolve(projectRoot, srcDir) }];
-
-const createProxy = (apiProxy) => {
-  if (!apiProxy?.enabled) {
-    return undefined;
+const resolveCallable = (moduleExport, specifier) => {
+  const candidates = [moduleExport, moduleExport?.default, moduleExport?.default?.default];
+  const factory = candidates.find((candidate) => typeof candidate === 'function');
+  if (factory === undefined) {
+    throw new TypeError(`"${specifier}" does not export a plugin factory.`);
   }
+  return factory;
+};
 
+const createSolidPlugin = resolveCallable(solidPlugin, 'vite-plugin-solid');
+
+const resolveProjectRoot = (projectRoot) => path.resolve(projectRoot ?? process.cwd());
+
+const mergeLayers = (layers) => layers.reduce((merged, layer) => mergeConfig(merged, layer));
+
+const dedupeConfigArrays = (config) => {
+  const result = { ...config };
+  for (const [section, key] of DEDUPED_ARRAY_PATHS) {
+    const values = config[section]?.[key];
+    if (Array.isArray(values)) {
+      result[section] = { ...result[section], [key]: [...new Set(values)] };
+    }
+  }
+  return result;
+};
+
+const buildAliasConfig = ({ alias, projectRoot, srcDir }) =>
+  alias === null ? {} : { resolve: { alias: { [alias]: path.resolve(projectRoot, srcDir) } } };
+
+const buildServerConfig = ({ port, host }) => {
+  const config = {};
+  if (port !== undefined) {
+    config.server = { port };
+    config.preview = { port };
+  }
+  if (host !== undefined) {
+    config.server = { ...config.server, host };
+  }
+  return config;
+};
+
+const createProxyRewrite = (proxyPath) => {
+  const prefix = new RegExp(`^${RegExp.escape(proxyPath)}`, 'u');
+  return (requestPath) => requestPath.replace(prefix, '');
+};
+
+const buildApiProxyConfig = (apiProxy) => {
+  if (!apiProxy?.enabled) {
+    return {};
+  }
   const {
-    env = {},
-    envVar = 'VITE_API_BASE_URL',
+    env,
+    envVar = DEFAULT_API_PROXY_ENV_VAR,
     target,
     fallbackTarget,
-    path = '/api',
+    path: proxyPath = DEFAULT_API_PROXY_PATH,
     changeOrigin = true,
-    secure = false,
-    rewrite,
+    secure = true,
+    rewrite = createProxyRewrite(proxyPath),
   } = apiProxy;
-  const proxyTarget = target ?? env[envVar] ?? fallbackTarget ?? 'http://localhost:5000';
-  const defaultRewrite = (requestPath) => requestPath.replace(new RegExp(`^${escapeRegExp(path)}`, 'u'), '');
+  const resolvedTarget = [target, env?.[envVar], fallbackTarget].find(isNonEmptyString) ?? DEFAULT_API_PROXY_TARGET;
+  const proxyOptions = { target: resolvedTarget, changeOrigin, secure };
+  if (rewrite !== false) {
+    proxyOptions.rewrite = rewrite;
+  }
+  return { server: { proxy: { [proxyPath]: proxyOptions } } };
+};
 
+const toLinkedFileAlias = (entry, workspaceRoot, projectRoot) => {
+  const { from, local } = typeof entry === 'string' ? { from: entry } : entry;
   return {
-    [path]: {
-      target: proxyTarget,
-      changeOrigin,
-      secure,
-      ...(rewrite === false ? {} : { rewrite: rewrite ?? defaultRewrite }),
-    },
+    find: normalizePath(path.join(workspaceRoot, 'node_modules', from)),
+    replacement: local ?? normalizePath(path.join(projectRoot, 'node_modules', from)),
   };
 };
 
-const createLinkedWorkspaceConfig = (projectRoot, linkedWorkspace) => {
+const buildLinkedWorkspaceConfig = (linkedWorkspace, projectRoot) => {
   if (!linkedWorkspace?.enabled) {
     return {};
   }
-
-  if (typeof linkedWorkspace.workspacePath !== 'string' || linkedWorkspace.workspacePath.length === 0) {
-    throw new TypeError('linkedWorkspace.workspacePath must be a non-empty string when enabled.');
+  const missing = REQUIRED_LINKED_WORKSPACE_FIELDS.filter((field) => !isNonEmptyString(linkedWorkspace[field]));
+  if (missing.length > 0) {
+    throw new Error(
+      `createSolidAppViteConfig: linkedWorkspace.enabled requires ${missing.map((field) => `"${field}"`).join(' and ')}.`,
+    );
   }
-
-  if (typeof linkedWorkspace.packageName !== 'string' || linkedWorkspace.packageName.length === 0) {
-    throw new TypeError('linkedWorkspace.packageName must be a non-empty string when enabled.');
-  }
-
-  const workspacePath = resolve(projectRoot, linkedWorkspace.workspacePath);
-  const aliases = (linkedWorkspace.fileAliases ?? []).map((fileAlias) => {
-    const from = typeof fileAlias === 'string' ? fileAlias : fileAlias.from;
-    const local = typeof fileAlias === 'string' ? undefined : fileAlias.local;
-
-    return {
-      find: resolve(workspacePath, 'node_modules', from),
-      replacement: local ?? resolve(projectRoot, 'node_modules', from),
-    };
-  });
-
+  const {
+    workspacePath,
+    packageName,
+    fileAliases = [],
+    dedupe = [],
+    optimizeDepsInclude = [],
+    optimizeDepsExclude = [packageName],
+  } = linkedWorkspace;
+  const workspaceRoot = path.resolve(projectRoot, workspacePath);
   return {
     resolve: {
-      alias: aliases,
-      dedupe: [...(linkedWorkspace.dedupe ?? [])],
+      alias: fileAliases.map((entry) => toLinkedFileAlias(entry, workspaceRoot, projectRoot)),
+      dedupe,
     },
-    optimizeDeps: {
-      include: [...(linkedWorkspace.optimizeDepsInclude ?? [])],
-      exclude: [...(linkedWorkspace.optimizeDepsExclude ?? [linkedWorkspace.packageName])],
-    },
-    server: {
-      fs: {
-        allow: [projectRoot, workspacePath],
-      },
-    },
+    optimizeDeps: { include: optimizeDepsInclude, exclude: optimizeDepsExclude },
+    server: { fs: { allow: [projectRoot, workspaceRoot] } },
   };
 };
 
 export const createSolidAppViteConfig = (userConfig = {}, options = {}) => {
-  const {
-    projectRoot = process.cwd(),
-    alias = '~',
-    srcDir = 'src',
-    port,
-    host,
-    solidPluginOptions,
-    apiProxy,
-    linkedWorkspace,
-  } = options;
-  const proxy = createProxy(apiProxy);
-  const baseConfig = {
-    plugins: [solid(solidPluginOptions)],
-    resolve: {
-      alias: createAlias(projectRoot, alias, srcDir),
-    },
-    ...(port !== undefined || host !== undefined || proxy
-      ? {
-          server: {
-            ...(port !== undefined ? { port } : {}),
-            ...(host !== undefined ? { host } : {}),
-            ...(proxy ? { proxy } : {}),
-          },
-        }
-      : {}),
-    ...(port !== undefined ? { preview: { port } } : {}),
-  };
-  const linkedConfig = createLinkedWorkspaceConfig(projectRoot, linkedWorkspace);
-
-  return deduplicateMergedDependencies(mergeConfig(mergeConfig(baseConfig, linkedConfig), userConfig));
+  const { alias = DEFAULT_ALIAS, srcDir = DEFAULT_SRC_DIR, port, host, solidPluginOptions, apiProxy } = options;
+  const projectRoot = resolveProjectRoot(options.projectRoot);
+  return dedupeConfigArrays(
+    mergeLayers([
+      { plugins: [createSolidPlugin(solidPluginOptions)] },
+      buildAliasConfig({ alias, projectRoot, srcDir }),
+      buildServerConfig({ port, host }),
+      buildApiProxyConfig(apiProxy),
+      buildLinkedWorkspaceConfig(options.linkedWorkspace, projectRoot),
+      userConfig,
+    ]),
+  );
 };
 
-export const readPeerDependencies = (packageJsonPath = resolve(process.cwd(), 'package.json')) => {
+export const readPeerDependencies = (packageJsonPath = path.resolve(process.cwd(), 'package.json')) => {
   try {
     const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-    return [...new Set([...Object.keys(manifest.peerDependencies ?? {}), ...Object.keys(manifest.dependencies ?? {})])];
+    const names = [...Object.keys(manifest.peerDependencies ?? {}), ...Object.keys(manifest.dependencies ?? {})];
+    return [...new Set(names)];
   } catch {
+    // Contract: an unreadable manifest degrades to explicit externals instead of failing the config load.
     return [];
   }
 };
 
-const createExternalMatcher = (externalPackages) => {
-  const packagePattern = externalPackages.length
-    ? new RegExp(`^(?:${externalPackages.map(escapeRegExp).join('|')})(?:/|$)`, 'u')
-    : null;
+const createExternalMatcher = (packages) => {
+  if (packages.length === 0) {
+    return (id) => id.includes('node_modules');
+  }
+  const names = packages.map((name) => RegExp.escape(name)).join('|');
+  const packagePattern = new RegExp(`^(?:${names})(?:/.*)?$`, 'u');
+  return (id) => id.includes('node_modules') || packagePattern.test(id);
+};
 
-  return (id) => id.includes('node_modules') || packagePattern?.test(id) === true;
+const toPosixPath = (value) => value.replaceAll('\\', '/');
+
+const createEntryFileNames = (preserveModulesRoot, qualifyWithFormat) => {
+  const rootPrefix = `${toPosixPath(preserveModulesRoot).replace(/\/$/u, '')}/`;
+  const extension = qualifyWithFormat ? '.[format].js' : '.js';
+  return ({ name }) => {
+    const posixName = toPosixPath(name);
+    return `${posixName.startsWith(rootPrefix) ? posixName.slice(rootPrefix.length) : posixName}${extension}`;
+  };
+};
+
+const buildOutputOptions = ({ preserveModules, preserveModulesRoot, formats }) => {
+  if (!preserveModules) {
+    return { preserveModules };
+  }
+  const entryFileNames = createEntryFileNames(preserveModulesRoot, formats.length > 1);
+  return { preserveModules, preserveModulesRoot, entryFileNames };
 };
 
 const loadDtsPlugin = async (dts) => {
   if (dts === false) {
     return null;
   }
-
-  const dtsModule = await import('vite-plugin-dts');
-  const createDtsPlugin = dtsModule.default ?? dtsModule;
+  const createDtsPlugin = resolveCallable(await import('vite-plugin-dts'), 'vite-plugin-dts');
   return createDtsPlugin({ insertTypesEntry: true, ...dts });
 };
 
 export const createSolidLibViteConfig = async (userConfig = {}, options = {}) => {
   const {
-    projectRoot = process.cwd(),
-    alias = '~',
-    srcDir = 'src',
-    entry = 'src/index.ts',
     fileName,
-    formats = ['es'],
+    alias = DEFAULT_ALIAS,
+    srcDir = DEFAULT_SRC_DIR,
+    entry = `${srcDir}/index.ts`,
+    formats = DEFAULT_LIB_FORMATS,
     externalPackages = [],
     externalizeFromPackageJson = false,
     preserveModules = true,
-    preserveModulesRoot = 'src',
+    preserveModulesRoot = srcDir,
     cssCodeSplit = false,
-    target = 'esnext',
-    dts = {},
+    target = DEFAULT_LIB_TARGET,
+    dts,
     solidPluginOptions,
   } = options;
+  if (!isNonEmptyString(fileName)) {
+    throw new TypeError('createSolidLibViteConfig: "fileName" is required and must be a non-empty string.');
+  }
+  const projectRoot = resolveProjectRoot(options.projectRoot);
+  const externals = externalizeFromPackageJson
+    ? [...new Set([...externalPackages, ...readPeerDependencies(path.resolve(projectRoot, 'package.json'))])]
+    : externalPackages;
 
-  if (typeof fileName !== 'string' || fileName.length === 0) {
-    throw new TypeError('fileName must be a non-empty string.');
+  const plugins = [createSolidPlugin(solidPluginOptions)];
+  const dtsPlugin = await loadDtsPlugin(dts);
+  if (dtsPlugin !== null) {
+    plugins.push(dtsPlugin);
   }
 
-  const manifestPackages = externalizeFromPackageJson ? readPeerDependencies(resolve(projectRoot, 'package.json')) : [];
-  const externals = [...new Set([...externalPackages, ...manifestPackages])];
-  const dtsPlugin = await loadDtsPlugin(dts);
-  const plugins = [solid(solidPluginOptions), ...(dtsPlugin ? [dtsPlugin] : [])];
-  const normalizedModulesRoot = preserveModulesRoot.replaceAll('\\', '/').replace(/\/$/u, '');
-  const modulesRootPattern = new RegExp(`^${escapeRegExp(normalizedModulesRoot)}/?`, 'u');
-  const baseConfig = {
-    plugins,
-    resolve: {
-      alias: createAlias(projectRoot, alias, srcDir),
-    },
-    build: {
-      target,
-      cssCodeSplit,
-      lib: {
-        entry: resolve(projectRoot, entry),
-        formats,
-        fileName,
-      },
-      rollupOptions: {
-        external: createExternalMatcher(externals),
-        output: {
-          preserveModules,
-          preserveModulesRoot,
-          entryFileNames: (chunkInfo) => `${chunkInfo.name.replaceAll('\\', '/').replace(modulesRootPattern, '')}.js`,
+  return dedupeConfigArrays(
+    mergeLayers([
+      { plugins },
+      buildAliasConfig({ alias, projectRoot, srcDir }),
+      {
+        build: {
+          target,
+          cssCodeSplit,
+          lib: { entry: path.resolve(projectRoot, entry), fileName, formats: [...formats] },
+          rollupOptions: {
+            external: createExternalMatcher(externals),
+            output: buildOutputOptions({ preserveModules, preserveModulesRoot, formats }),
+          },
         },
       },
-    },
-  };
-
-  return deduplicateMergedDependencies(mergeConfig(baseConfig, userConfig));
+      userConfig,
+    ]),
+  );
 };

@@ -1,28 +1,30 @@
 #!/usr/bin/env sh
 
-if ! command -v node >/dev/null 2>&1; then
-  if command -v fnm >/dev/null 2>&1; then
-    eval "$(fnm env --use-on-cd --shell bash)"
-  fi
+hook_dir="${hook_dir:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}"
+repo_root="$(CDPATH= cd -- "$hook_dir/.." && pwd)"
+
+if ! command -v node >/dev/null 2>&1 && command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env --shell bash)"
+  # A missing or uninstalled version file is non-fatal; the node check below reports the failure.
+  (cd "$repo_root" && fnm use --silent-if-unchanged) >/dev/null 2>&1 || true
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "pre-commit: node not found on PATH. Install Node.js or configure fnm before committing." >&2
+  echo "pre-commit: node was not found on PATH or through fnm." >&2
   exit 127
 fi
 
-hook_dir="${hook_dir:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}"
-repository_root=$(CDPATH= cd -- "$hook_dir/.." && pwd)
+run_lint_staged() {
+  exec "$@" --concurrent false --cwd "$repo_root"
+}
 
-if command -v lint-staged >/dev/null 2>&1; then
-  lint-staged --no-stash --concurrent false --cwd "$repository_root"
-  exit $?
+if [ -x "$repo_root/node_modules/.bin/lint-staged" ]; then
+  run_lint_staged "$repo_root/node_modules/.bin/lint-staged"
+elif command -v lint-staged >/dev/null 2>&1; then
+  run_lint_staged lint-staged
+elif command -v npx >/dev/null 2>&1; then
+  run_lint_staged npx --no-install lint-staged
 fi
 
-if command -v npx >/dev/null 2>&1; then
-  npx --no-install lint-staged --no-stash --concurrent false --cwd "$repository_root"
-  exit $?
-fi
-
-echo "pre-commit: neither lint-staged nor npx is available. Install lint-staged as a dev dependency." >&2
+echo "pre-commit: neither lint-staged nor npx was found." >&2
 exit 127

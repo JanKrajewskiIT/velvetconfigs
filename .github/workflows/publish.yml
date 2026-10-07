@@ -8,6 +8,9 @@ on:
 jobs:
   verify:
     uses: ./.github/workflows/verify.yml
+    permissions:
+      contents: read
+      packages: read
     secrets:
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
@@ -16,10 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      version: ${{ steps.manifest.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Check package version
+        id: manifest
         shell: bash
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
@@ -28,6 +34,7 @@ jobs:
             echo "::error::package.json version $PACKAGE_VERSION does not match tag $GITHUB_REF_NAME"
             exit 1
           fi
+          echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
 
   publish:
     needs: check-version
@@ -42,22 +49,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 26.x
+          node-version-file: .nvmrc
           registry-url: https://npm.pkg.github.com
           scope: '@jankrajewskiit'
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
       - name: Publish package
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.check-version.outputs.version }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
           if [[ "$VERSION" == *-* ]]; then
             CHANNEL=${VERSION#*-}
             CHANNEL=${CHANNEL%%.*}
-            npm publish --provenance --tag "$CHANNEL"
+            npm publish --provenance --ignore-scripts --tag "$CHANNEL"
           else
-            npm publish --provenance
+            npm publish --provenance --ignore-scripts
           fi

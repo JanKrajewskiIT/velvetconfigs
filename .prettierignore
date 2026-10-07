@@ -1,12 +1,2 @@
-node_modules/
-coverage/
-dist/
-build/
-package-lock.json
-.husky/_/
 .agents/
-.claude/
-.codex/
-.cursor/
-.github/instructions/
-.github/skills/
+package-lock.json

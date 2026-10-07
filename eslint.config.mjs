@@ -1,14 +1,9 @@
-import eslint from '@eslint/js';
-import eslintConfigPrettier from 'eslint-config-prettier';
+import js from '@eslint/js';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
 
-export default [
-  eslint.configs.recommended,
-  {
-    files: ['**/*.{js,mjs,cjs}'],
-    languageOptions: {
-      globals: globals.node,
-    },
-  },
-  eslintConfigPrettier,
-];
+export default defineConfig(globalIgnores(['.agents/**']), js.configs.recommended, eslintConfigPrettier, {
+  files: ['**/*.mjs'],
+  languageOptions: { globals: globals.node },
+});

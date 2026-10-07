@@ -1,50 +1,50 @@
 import type { Linter } from 'eslint';
 
 export type FlatConfig = Linter.Config;
-export type EslintEnvironment = 'browser' | 'node' | 'worker' | 'serviceworker' | 'jest' | 'vitest';
-
-export interface CreateEslintConfigOptions {
-  tsconfigRootDir: string;
-  typedFiles?: readonly string[];
-  testFiles?: readonly string[];
-  environments?: readonly EslintEnvironment[];
-  ignorePaths?: readonly string[];
-  extraConfigs?: readonly FlatConfig[];
-  allowConsoleWarnError?: boolean;
-}
-
-export interface CreateNodeEslintConfigOptions {
-  tsconfigRootDir: string;
-  typedFiles?: readonly string[];
-  testFiles?: readonly string[];
-  ignorePaths?: readonly string[];
-  extraConfigs?: readonly FlatConfig[];
-  allowConsoleWarnError?: boolean;
-}
-
-export interface NoChildrenPropEntry {
-  component: string;
-  prop: string;
-  forbid: readonly string[];
-}
-
-export interface LiteralI18nKeyOptions {
-  dynamicFunction?: string;
-  staticFunction?: string;
-}
-
-export interface RestrictedSyntaxSelector {
-  selector: string;
-  message: string;
-}
 
 export type RestrictedSyntaxRule = Linter.RuleEntry;
 
+export type EslintEnvironment = 'browser' | 'node' | 'worker' | 'serviceworker' | 'jest' | 'vitest';
+
+export interface RestrictedSyntaxSelector {
+  readonly selector: string;
+  readonly message: string;
+}
+
+export interface NoChildrenPropEntry {
+  readonly component: string;
+  readonly prop: string;
+  readonly forbid: readonly string[];
+}
+
+export interface LiteralI18nKeyOptions {
+  readonly dynamicFunction?: string;
+  readonly staticFunction?: string;
+}
+
+export interface CreateNodeEslintConfigOptions {
+  readonly tsconfigRootDir: string;
+  readonly typedFiles?: readonly string[];
+  readonly testFiles?: readonly string[];
+  readonly ignorePaths?: readonly string[];
+  readonly extraConfigs?: readonly FlatConfig[];
+  readonly allowConsoleWarnError?: boolean;
+}
+
+export interface CreateEslintConfigOptions extends CreateNodeEslintConfigOptions {
+  readonly environments?: readonly EslintEnvironment[];
+}
+
 export declare const createEslintConfig: (options: CreateEslintConfigOptions) => FlatConfig[];
+
 export declare const createNodeEslintConfig: (options: CreateNodeEslintConfigOptions) => FlatConfig[];
+
 export declare const buildNoChildrenPropSelectors: (
   entries: readonly NoChildrenPropEntry[],
 ) => RestrictedSyntaxSelector[];
+
 export declare const buildNoChildrenPropRule: (entries: readonly NoChildrenPropEntry[]) => RestrictedSyntaxRule;
+
 export declare const buildLiteralI18nKeySelectors: (options?: LiteralI18nKeyOptions) => RestrictedSyntaxSelector[];
+
 export declare const buildLiteralI18nKeyRule: (options?: LiteralI18nKeyOptions) => RestrictedSyntaxRule;
