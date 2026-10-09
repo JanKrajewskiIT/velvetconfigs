@@ -1,6 +1,6 @@
 {
   "name": "@jankrajewskiit/configs",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "Shared tooling presets (ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged, Husky, Nginx) for SolidJS apps and libraries.",
   "type": "module",
   "license": "MIT",
