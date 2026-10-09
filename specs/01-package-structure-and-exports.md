@@ -61,7 +61,6 @@ The plugin set covers:
 - unused-imports plugin.
 - eslint-config-prettier (disables stylistic rules that conflict with Prettier).
 - globals (predefined environment globals).
-- Stylelint standard config.
 - Vite Solid plugin and `vite-plugin-dts` (loaded lazily inside the Vite library factory).
 
 The audited dependency ranges are part of the reproducible baseline:
@@ -76,12 +75,11 @@ The audited dependency ranges are part of the reproducible baseline:
 | `eslint-plugin-solid`              | `^0.18.0`  |
 | `eslint-plugin-unused-imports`     | `^4.4.1`   |
 | `globals`                          | `^17.12.0` |
-| `stylelint-config-standard`        | `^40.0.0`  |
 | `typescript-eslint`                | `^8.70.1`  |
 | `vite-plugin-dts`                  | `^5.1.1`   |
 | `vite-plugin-solid`                | `^2.11.14` |
 
-Runtime peer ranges are `eslint >=9.0.0`, `lint-staged >=17.0.0`, `prettier >=3.0.0`, `stylelint >=17.0.0`, `typescript >=5.5.0`, and `vite >=6.0.0`.
+Runtime peer ranges are `eslint ^10.0.0`, `lint-staged ^17.0.0`, `prettier ^3.0.0`, `stylelint ^17.0.0`, `stylelint-config-standard ^40.0.0`, `typescript ^6.0.0`, and `vite ^8.0.0`.
 
 ## Step 5 — Dev dependencies
 

@@ -20,7 +20,7 @@ When the package requires authentication, also configure a token with `read:pack
 npm install --save-dev @jankrajewskiit/configs
 ```
 
-Tool runtimes are optional peers. Install only the ones you run: `eslint` (`^10.0.0`), `prettier` (`^3.0.0`), `stylelint` (`^17.0.0`), `typescript` (`^5.5.0 || ^6.0.0`), `vite` (`^6.0.0 || ^7.0.0 || ^8.0.0`), and `lint-staged` (`^17.0.0`). Preset plugins are regular dependencies. `eslint-plugin-jsx-a11y` still declares ESLint 9 as its newest peer, so `npm install` prints an `ERESOLVE overriding peer dependency` warning with ESLint 10; the install succeeds.
+Tool runtimes are optional peers. Install only the ones you run: `eslint` (`^10.0.0`), `prettier` (`^3.0.0`), `stylelint` (`^17.0.0`), `stylelint-config-standard` (`^40.0.0`), `typescript` (`^6.0.0`), `vite` (`^8.0.0`), and `lint-staged` (`^17.0.0`). Preset plugins are regular dependencies. `eslint-plugin-jsx-a11y` still declares ESLint 9 as its newest peer, so `npm install` prints an `ERESOLVE overriding peer dependency` warning with ESLint 10; the install succeeds.
 
 Releases are published with npm provenance. Verify an installed version with:
 
@@ -100,6 +100,12 @@ export default { ...preset, printWidth: 100 };
 ```
 
 ### Stylelint
+
+Install the runtime and the base config it extends:
+
+```sh
+npm install --save-dev stylelint stylelint-config-standard
+```
 
 ```json
 { "stylelint": { "extends": "@jankrajewskiit/configs/stylelint" } }

@@ -40,7 +40,7 @@ Two consumer wiring patterns must be supported:
 
 ## Step 8 — Plugin packaging
 
-`stylelint-config-standard` is declared as a regular `dependencies` entry of the preset package and is therefore installed with it. Stylelint itself remains an optional peer, so consumers install the runtime only when they run Stylelint; they receive the compatible standard config transitively.
+`stylelint-config-standard` is an optional peer dependency of the preset package, next to `stylelint`. A consumer that runs Stylelint installs both, so repositories without CSS do not install Stylelint and its transitive glob dependencies. The peer metadata marks both as optional.
 
 ## Step 9 — Export entry
 

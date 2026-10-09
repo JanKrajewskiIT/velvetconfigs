@@ -77,8 +77,9 @@
     "lint-staged": "^17.0.0",
     "prettier": "^3.0.0",
     "stylelint": "^17.0.0",
-    "typescript": "^5.5.0 || ^6.0.0",
-    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+    "stylelint-config-standard": "^40.0.0",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {
     "eslint": {
@@ -91,6 +92,9 @@
       "optional": true
     },
     "stylelint": {
+      "optional": true
+    },
+    "stylelint-config-standard": {
       "optional": true
     },
     "typescript": {
@@ -112,7 +116,6 @@
     "eslint-plugin-solid": "^0.18.1",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.13.0",
-    "stylelint-config-standard": "^40.0.0",
     "typescript-eslint": "^8.71.1",
     "vite-plugin-dts": "^5.1.2",
     "vite-plugin-solid": "^2.11.14"
