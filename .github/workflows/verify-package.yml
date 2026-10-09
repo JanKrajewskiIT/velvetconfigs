@@ -32,7 +32,8 @@ jobs:
         run: npm ci
 
       - name: Audit
-        run: npm audit --audit-level=high
+        # Spec 19 window for GHSA-vfj7-8cjw-p6xm (braces, no fix); restore --audit-level=high when fixed.
+        run: npm audit --audit-level=critical
 
       - name: Verify
         run: npm run verify

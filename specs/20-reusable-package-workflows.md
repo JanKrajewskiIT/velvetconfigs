@@ -15,7 +15,7 @@ Steps in order:
 1. `actions/checkout@v7`.
 2. `actions/setup-node@v7` with `node-version-file: .nvmrc`, `registry-url: https://npm.pkg.github.com`, `scope: '@jankrajewskiit'`, and `cache: npm`.
 3. `npm ci`.
-4. `npm audit --audit-level=high`, without `continue-on-error` (Spec 19).
+4. `npm audit --audit-level=critical` without `continue-on-error`, as the time-bounded window of Spec 19 Step 3 for GHSA-vfj7-8cjw-p6xm (`braces`, no upstream fix). The step returns to `--audit-level=high` when the advisory has a fix.
 5. `npm run verify`.
 
 The job exports `GHCR_TOKEN` and `NODE_AUTH_TOKEN` from `secrets.GHCR_TOKEN`, falling back to `github.token`. The consumer `.npmrc` references `${GHCR_TOKEN}`, so every npm invocation in the job needs it defined.
