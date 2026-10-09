@@ -12,7 +12,16 @@ import tseslint from 'typescript-eslint';
 const SOURCE_EXTENSIONS = 'js,jsx,ts,tsx,mjs,cjs,mts,cts';
 const UNUSED_IGNORE_PATTERN = '^_';
 
-const DEFAULT_IGNORES = ['**/dist/**', '**/build/**', '**/coverage/**', '**/*.d.ts'];
+const DEFAULT_IGNORES = [
+  '**/dist/**',
+  '**/build/**',
+  '**/coverage/**',
+  '**/*.d.ts',
+  '.agents/**',
+  '.claude/**',
+  '.codex/**',
+  '.cursor/**',
+];
 const DEFAULT_BROWSER_TYPED_FILES = ['src/**/*.{ts,tsx,js,jsx}'];
 const DEFAULT_NODE_TYPED_FILES = ['src/**/*.{ts,js}'];
 const DEFAULT_TEST_FILES = [

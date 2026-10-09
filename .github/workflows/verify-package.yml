@@ -1,0 +1,38 @@
+name: Verify package
+
+on:
+  workflow_call:
+    secrets:
+      GHCR_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
+      NODE_AUTH_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+          scope: '@jankrajewskiit'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit
+        run: npm audit --audit-level=high
+
+      - name: Verify
+        run: npm run verify

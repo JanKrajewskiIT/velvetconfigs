@@ -116,7 +116,9 @@ After applying every spec, the repository looks like:
 │   ├── skills/                   # generated, ignored client view
 │   └── workflows/
 │       ├── ci.yml
+│       ├── publish-package.yml    # reusable, Spec 20
 │       ├── publish.yml
+│       ├── verify-package.yml     # reusable, Spec 20
 │       └── verify.yml
 ├── .gitmodules
 ├── .husky/

@@ -18,7 +18,7 @@ Exports:
 
 The factories accept overrides but ship sensible defaults:
 
-- Default ignores recursively cover `dist`, `build`, and `coverage` directories, all `.d.ts` files, and the Vite environment shim `vite-env.d.ts`.
+- Default ignores recursively cover `dist`, `build`, and `coverage` directories, all `.d.ts` files, the Vite environment shim `vite-env.d.ts`, and the agent-guidance directories `.agents`, `.claude`, `.codex`, and `.cursor` at the repository root.
 - Default typed-file glob targets `src/**/*.{ts,tsx,js,jsx}`. The Node factory uses `src/**/*.{ts,js}` because there is no JSX.
 - Default test-file globs cover `**/*.{test,spec}.*`, `**/__tests__/**`, and `**/test/**` across the TypeScript/JavaScript extensions, including `.mjs` and `.cjs`.
 

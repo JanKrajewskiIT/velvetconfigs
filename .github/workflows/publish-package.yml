@@ -1,0 +1,76 @@
+name: Publish package
+
+on:
+  workflow_call:
+    secrets:
+      GHCR_TOKEN:
+        required: false
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.manifest.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check release tag and package version
+        id: manifest
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+          if [[ ! "$RELEASE_TAG" =~ $semver ]]; then
+            echo "::error::Release tag $RELEASE_TAG must match v<semver>."
+            exit 1
+          fi
+          package_version="$(node -p "require('./package.json').version")"
+          if [[ "${RELEASE_TAG#v}" != "$package_version" ]]; then
+            echo "::error::package.json version $package_version does not match tag $RELEASE_TAG"
+            exit 1
+          fi
+          echo "version=$package_version" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: check-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+          scope: '@jankrajewskiit'
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
+        run: npm ci
+
+      - name: Publish package
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          NODE_AUTH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          if [[ "$VERSION" == *-* ]]; then
+            channel="${VERSION#*-}"
+            channel="${channel%%.*}"
+            npm publish --provenance --access public --tag "$channel"
+          else
+            npm publish --provenance --access public
+          fi

@@ -13,7 +13,7 @@ Route the package scope to GitHub Packages in the consumer's `.npmrc`:
 When the package requires authentication, also configure a token with `read:packages` access without committing its value:
 
 ```ini
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+//npm.pkg.github.com/:_authToken=${GHCR_TOKEN}
 ```
 
 ```sh
@@ -161,6 +161,39 @@ COPY node_modules/@jankrajewskiit/configs/nginx/spa.conf /etc/nginx/conf.d/defau
 
 The server listens on port 3000. Content-hashed files under `/assets/` are cached immutably, `index.html` is never cached, and the default Content Security Policy keeps everything on `self`; extend `connect-src` and `style-src` when the app needs other origins or inline styles.
 
+## Reusable workflows
+
+Consumer packages call the shared verify and publish pipeline instead of copying it. Both workflows read the Node version from the consumer's `.nvmrc` and take an optional `GHCR_TOKEN` secret.
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  verify:
+    uses: jankrajewskiit/velvetconfigs/.github/workflows/verify-package.yml@main
+    secrets:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+```
+
+```yaml
+# .github/workflows/publish.yml
+jobs:
+  verify:
+    uses: jankrajewskiit/velvetconfigs/.github/workflows/verify-package.yml@main
+    secrets:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+  publish:
+    needs: verify
+    uses: jankrajewskiit/velvetconfigs/.github/workflows/publish-package.yml@main
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    secrets:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+```
+
+The repository must allow access from other repositories under Settings, Actions, General.
+
 ## Release
 
 1. Confirm `main` is green.
@@ -171,10 +204,19 @@ The `v*` tag starts `publish.yml`: verify, version check, then `npm publish --pr
 
 ## Upgrading
 
-Release notes for the current major (2.x) are listed under [GitHub Releases](https://github.com/jankrajewskiit/configs/releases). No previous major is actively supported; consumers that cannot migrate must pin the last suitable release explicitly.
+Release notes for the current major (3.x) are listed under [GitHub Releases](https://github.com/JanKrajewskiIT/velvetconfigs/releases). No previous major is actively supported; consumers that cannot migrate must pin the last suitable release explicitly.
 
 Deprecated exports stay functional for at least one minor cycle and name their replacement in declarations and release notes before removal in a major release.
 
 ## Maintenance
 
 Dependabot updates npm and GitHub Actions dependencies weekly. Maintainers also run a quarterly full dependency refresh, regenerate the lockfile from scratch, and record crossed majors, overrides, and audit suppressions in the pull request. Refresh pull requests are never auto-merged and produce a major release when peer minimums change.
+
+## Branch protection
+
+Protect the default branch with:
+
+- a required, passing `verify` status check;
+- at least one approving CODEOWNERS review;
+- a branch that is up to date before merging;
+- force pushes and non-administrative direct pushes disabled.
