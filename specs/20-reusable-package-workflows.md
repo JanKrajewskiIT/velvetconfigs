@@ -12,8 +12,8 @@ Declares `on: workflow_call` with an optional `GHCR_TOKEN` secret and no inputs.
 
 Steps in order:
 
-1. `actions/checkout@v6`.
-2. `actions/setup-node@v6` with `node-version-file: .nvmrc`, `registry-url: https://npm.pkg.github.com`, `scope: '@jankrajewskiit'`, and `cache: npm`.
+1. `actions/checkout@v7`.
+2. `actions/setup-node@v7` with `node-version-file: .nvmrc`, `registry-url: https://npm.pkg.github.com`, `scope: '@jankrajewskiit'`, and `cache: npm`.
 3. `npm ci`.
 4. `npm audit --audit-level=high`, without `continue-on-error` (Spec 19).
 5. `npm run verify`.

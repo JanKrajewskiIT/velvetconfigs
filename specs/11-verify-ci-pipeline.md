@@ -29,8 +29,8 @@ Each matrix entry runs the same step list in isolation.
 
 The job MUST execute these steps in order:
 
-1. `actions/checkout@v6` — fetch the repository.
-2. `actions/setup-node@v6` with:
+1. `actions/checkout@v7` — fetch the repository.
+2. `actions/setup-node@v7` with:
    - `node-version` taken from the matrix entry.
    - `scope` set to the package's npm scope (required so the implicit `.npmrc` is wired for GitHub Packages).
    - `cache: 'npm'` to enable the action's built-in dependency cache keyed on the lockfile.
@@ -75,6 +75,6 @@ The local command does not include `npm ci` or `npm audit`; local parity here re
 ## Acceptance criteria
 
 - `ci.yml` triggers only for pushes and pull requests targeting `main` and delegates its sole job to `verify.yml`.
-- A reusable-workflow run on Node `26.x` uses `actions/checkout@v6` and `actions/setup-node@v6`, then performs `npm ci`, hard-gates `npm audit --audit-level=high`, and runs `npm run verify` in that order.
+- A reusable-workflow run on Node `26.x` uses `actions/checkout@v7` and `actions/setup-node@v7`, then performs `npm ci`, hard-gates `npm audit --audit-level=high`, and runs `npm run verify` in that order.
 - The verify job has only `contents: read` and `packages: read`; an optional `GHCR_TOKEN` is forwarded only to package installation and is never printed.
 - A failed install, audit, lint, format check, or publint check fails the reusable workflow.
