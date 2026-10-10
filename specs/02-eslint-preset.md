@@ -2,7 +2,7 @@
 
 ## Step 1 — Output shape
 
-Create `eslint/index.mjs` exporting two factory functions and two selector-builder helpers. Factories return ESLint flat-config arrays produced via `defineConfig` from `eslint/config`. Static objects are not exported — every consumer must pass at minimum its TypeScript project root so the typed-rules layer can run.
+Create `eslint/index.mjs` exporting two factory functions, selector and rule builders, and focused flat-config builders for shared rule overrides. Factories return ESLint flat-config arrays produced via `defineConfig` from `eslint/config`. Static preset objects are not exported — every consumer must pass at minimum its TypeScript project root so the typed-rules layer can run.
 
 A sibling `eslint/index.d.mts` declares the public type surface (Step 11). The two files form one logical preset; the runtime artifact is the `.mjs`, the type artifact is the `.d.mts`.
 
@@ -13,6 +13,9 @@ Exports:
 - `buildNoChildrenPropSelectors` — emits `no-restricted-syntax` selectors that forbid using `children` (or `title`) on specific components, used by consumers that want to enforce semantic prop names.
 - `buildLiteralI18nKeySelectors` — emits selectors that forbid passing string literals to a dynamic translation function, steering consumers toward a separate static translation function.
 - Convenience wrappers `buildNoChildrenPropRule` and `buildLiteralI18nKeyRule` returning fully-formed rule entries (severity + selectors) for direct use in `rules`.
+- `buildRuleOverrideConfig` — creates a named, file-scoped rule override layer after validating its name, file patterns, and rule map.
+- `buildAllowEmptyInterfaceConfig` — creates the narrow TypeScript exception used by augmentable declaration interfaces.
+- `buildSolidHtmlForCompatConfig` — creates a file-scoped exception for libraries that intentionally expose Solid's native `htmlFor` prop.
 
 ## Step 2 — Default ignores and globs
 
@@ -88,7 +91,7 @@ The README must document at minimum:
 - Both factories with one example each (browser + Node).
 - The `tsconfigRootDir` requirement.
 - The `environments` option and its allowed tokens.
-- An example of extending rules via `extraConfigs` together with the selector-builder helpers.
+- An example of extending rules via `extraConfigs` and the shared rule/config builders.
 
 ## Step 11 — TypeScript declarations
 
@@ -102,6 +105,9 @@ The public surface declared in `eslint/index.d.mts`:
 - `buildNoChildrenPropRule(entries: readonly NoChildrenPropEntry[]): RestrictedSyntaxRule`
 - `buildLiteralI18nKeySelectors(options?: LiteralI18nKeyOptions): RestrictedSyntaxSelector[]`
 - `buildLiteralI18nKeyRule(options?: LiteralI18nKeyOptions): RestrictedSyntaxRule`
+- `buildRuleOverrideConfig(options: RuleOverrideConfigOptions): FlatConfig`
+- `buildAllowEmptyInterfaceConfig(files: readonly string[]): FlatConfig`
+- `buildSolidHtmlForCompatConfig(files: readonly string[]): FlatConfig`
 
 The `FlatConfig` type aliases `eslint`'s `Linter.Config`. The preset MUST NOT redefine ESLint's config shape; it re-exports the upstream type to avoid drift across ESLint majors.
 
@@ -131,6 +137,8 @@ The `FlatConfig` type aliases `eslint`'s `Linter.Config`. The preset MUST NOT re
 - `staticFunction?: string` — default `'ts'`. The static function is the one the rule's error message redirects consumers TOWARDS; the convention is that `ts('key')` is the compile-time-known counterpart.
 
 `RestrictedSyntaxRule` MUST resolve to ESLint's `Linter.RuleEntry` shape so the consumer can spread it into `rules`.
+
+`RuleOverrideConfigOptions` MUST declare a non-empty `name`, a non-empty readonly list of file globs, and a readonly rule map whose values use `RestrictedSyntaxRule`. The runtime builder MUST reject empty names, empty or invalid file lists, and empty, array-valued, or invalid rule maps.
 
 ## Step 13 — Export wiring
 
@@ -165,5 +173,7 @@ The repository lints its JavaScript modules through a repo-local flat config (Sp
 - Both factories reject a missing or non-string `tsconfigRootDir` and return the specified flat-config layers in the specified order for valid input.
 - Browser environment tokens merge cumulatively; an unknown token throws. The Node factory always applies Node built-in globals and exposes no environment option.
 - Default/extended ignores, typed globs, test globs, console policy, test relaxations, and `extraConfigs` precedence produce the specified effective rules.
-- Selector helpers return the specified raw selectors/messages for `children`, `title`, string literals, and interpolation-free templates; wrappers prepend `error`.
+- Selector helpers return the specified raw selectors/messages for `children`, `title`, string literals, and interpolation-free templates; rule wrappers prepend `error`.
+- Rule-override builders return named, file-scoped config layers; the augmentable-interface builder enables the exception only for the supplied files.
+- The Solid `htmlFor` compatibility builder disables only `solid/no-react-specific-props` and only for the supplied files.
 - Runtime exports, declarations, package export conditions, and README examples expose the same public surface without `any`.

@@ -22,6 +22,8 @@ npm install --save-dev @jankrajewskiit/configs
 
 Tool runtimes are optional peers. Install only the ones you run: `eslint` (`^10.0.0`), `prettier` (`^3.0.0`), `stylelint` (`^17.0.0`), `stylelint-config-standard` (`^40.0.0`), `typescript` (`^6.0.0`), `vite` (`^8.0.0`), and `lint-staged` (`^17.0.0`). Preset plugins are regular dependencies. `eslint-plugin-jsx-a11y` still declares ESLint 9 as its newest peer, so `npm install` prints an `ERESOLVE overriding peer dependency` warning with ESLint 10; the install succeeds.
 
+To compile with TypeScript 7, keep `typescript` on the 6.x line for `typescript-eslint` (it needs the JavaScript API and declares `typescript <6.1.0`) and install the native compiler under another name: `"typescript": "npm:@typescript/typescript6@^6.0.2"` and `"@typescript/native": "npm:typescript@^7.0.2"`. `tsc` then runs version 7 and `tsc6` runs version 6.
+
 Releases are published with npm provenance. Verify an installed version with:
 
 ```sh
@@ -55,8 +57,11 @@ npm audit signatures @jankrajewskiit/configs
 ```js
 // eslint.config.mjs
 import {
+  buildAllowEmptyInterfaceConfig,
   buildLiteralI18nKeySelectors,
   buildNoChildrenPropSelectors,
+  buildRuleOverrideConfig,
+  buildSolidHtmlForCompatConfig,
   createEslintConfig,
 } from '@jankrajewskiit/configs/eslint';
 
@@ -64,7 +69,8 @@ export default createEslintConfig({
   tsconfigRootDir: import.meta.dirname,
   environments: ['browser', 'vitest'],
   extraConfigs: [
-    {
+    buildRuleOverrideConfig({
+      name: 'app/component-props',
       files: ['src/**/*.tsx'],
       rules: {
         'no-restricted-syntax': [
@@ -73,10 +79,14 @@ export default createEslintConfig({
           ...buildLiteralI18nKeySelectors(),
         ],
       },
-    },
+    }),
+    buildAllowEmptyInterfaceConfig(['src/I18nDictionary.ts']),
+    buildSolidHtmlForCompatConfig(['src/**/*.tsx']),
   ],
 });
 ```
+
+`buildSolidHtmlForCompatConfig` disables `solid/no-react-specific-props` only for the supplied files. Use it only where the library intentionally exposes an `htmlFor` prop; TypeScript should still reject unsupported JSX props.
 
 ```js
 // eslint.config.mjs (Node)

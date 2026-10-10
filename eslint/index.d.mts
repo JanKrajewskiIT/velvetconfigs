@@ -22,6 +22,12 @@ export interface LiteralI18nKeyOptions {
   readonly staticFunction?: string;
 }
 
+export interface RuleOverrideConfigOptions {
+  readonly name: string;
+  readonly files: readonly string[];
+  readonly rules: Readonly<Record<string, RestrictedSyntaxRule>>;
+}
+
 export interface CreateNodeEslintConfigOptions {
   readonly tsconfigRootDir: string;
   readonly typedFiles?: readonly string[];
@@ -38,6 +44,12 @@ export interface CreateEslintConfigOptions extends CreateNodeEslintConfigOptions
 export declare const createEslintConfig: (options: CreateEslintConfigOptions) => FlatConfig[];
 
 export declare const createNodeEslintConfig: (options: CreateNodeEslintConfigOptions) => FlatConfig[];
+
+export declare const buildRuleOverrideConfig: (options: RuleOverrideConfigOptions) => FlatConfig;
+
+export declare const buildAllowEmptyInterfaceConfig: (files: readonly string[]) => FlatConfig;
+
+export declare const buildSolidHtmlForCompatConfig: (files: readonly string[]) => FlatConfig;
 
 export declare const buildNoChildrenPropSelectors: (
   entries: readonly NoChildrenPropEntry[],

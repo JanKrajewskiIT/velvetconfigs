@@ -1,3 +1,4 @@
+import { fixupConfigRules } from '@eslint/compat';
 import js from '@eslint/js';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
@@ -153,28 +154,30 @@ const scopeTypeAwareRules = (typedFiles) =>
   );
 
 const createConfig = ({ options, presets, plugins, rules, typedGlobals }) =>
-  defineConfig(
-    ...presets(scopeTypeAwareRules(options.typedFiles)),
-    eslintConfigPrettier,
-    globalIgnores([...DEFAULT_IGNORES, ...options.ignorePaths]),
-    {
-      name: 'configs/config-files',
-      files: CONFIG_FILES,
-      extends: [tseslint.configs.disableTypeChecked],
-      languageOptions: { globals: globals.node },
-    },
-    {
-      name: 'configs/typed-sources',
-      files: options.typedFiles,
-      languageOptions: {
-        globals: typedGlobals,
-        parserOptions: { projectService: true, tsconfigRootDir: options.tsconfigRootDir },
+  fixupConfigRules(
+    defineConfig(
+      ...presets(scopeTypeAwareRules(options.typedFiles)),
+      eslintConfigPrettier,
+      globalIgnores([...DEFAULT_IGNORES, ...options.ignorePaths]),
+      {
+        name: 'configs/config-files',
+        files: CONFIG_FILES,
+        extends: [tseslint.configs.disableTypeChecked],
+        languageOptions: { globals: globals.node },
       },
-      plugins: { 'unused-imports': unusedImports, 'simple-import-sort': simpleImportSort, ...plugins },
-      rules: { ...buildSharedRules(options), ...rules },
-    },
-    { name: 'configs/test-files', files: options.testFiles, rules: TEST_FILE_RULES },
-    ...options.extraConfigs,
+      {
+        name: 'configs/typed-sources',
+        files: options.typedFiles,
+        languageOptions: {
+          globals: typedGlobals,
+          parserOptions: { projectService: true, tsconfigRootDir: options.tsconfigRootDir },
+        },
+        plugins: { 'unused-imports': unusedImports, 'simple-import-sort': simpleImportSort, ...plugins },
+        rules: { ...buildSharedRules(options), ...rules },
+      },
+      { name: 'configs/test-files', files: options.testFiles, rules: TEST_FILE_RULES },
+      ...options.extraConfigs,
+    ),
   );
 
 export const createEslintConfig = (options) => {
@@ -203,6 +206,39 @@ export const createNodeEslintConfig = (options) => {
     typedGlobals: globals.node,
   });
 };
+
+const assertConfigFiles = (files, functionName) => {
+  if (!Array.isArray(files) || files.length === 0) {
+    throw new TypeError(`${functionName}: files must be a non-empty array.`);
+  }
+  files.forEach((file) => assertNonEmptyString(file, `${functionName}: each file pattern`));
+};
+
+export const buildRuleOverrideConfig = ({ name, files, rules }) => {
+  assertNonEmptyString(name, 'buildRuleOverrideConfig: "name"');
+  assertConfigFiles(files, 'buildRuleOverrideConfig');
+  if (typeof rules !== 'object' || rules === null || Array.isArray(rules) || Object.keys(rules).length === 0) {
+    throw new TypeError('buildRuleOverrideConfig: rules must be a non-empty object.');
+  }
+  if (Object.entries(rules).some(([ruleName, rule]) => ruleName.length === 0 || rule === undefined)) {
+    throw new TypeError('buildRuleOverrideConfig: each rule must have a name and a value.');
+  }
+  return { name, files: [...files], rules: { ...rules } };
+};
+
+export const buildAllowEmptyInterfaceConfig = (files) =>
+  buildRuleOverrideConfig({
+    name: 'configs/allow-empty-interfaces',
+    files,
+    rules: { '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always' }] },
+  });
+
+export const buildSolidHtmlForCompatConfig = (files) =>
+  buildRuleOverrideConfig({
+    name: 'configs/solid-htmlfor-compatibility',
+    files,
+    rules: { 'solid/no-react-specific-props': 'off' },
+  });
 
 const assertNoChildrenPropEntry = (entry) => {
   if (typeof entry !== 'object' || entry === null) {
