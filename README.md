@@ -54,6 +54,8 @@ npm audit signatures @jankrajewskiit/configs
 
 `tsconfigRootDir` is required; both factories throw without it. `environments` accepts `browser`, `node`, `worker`, `serviceworker`, `jest`, and `vitest` and merges their globals (default `['browser']`). Files outside `typedFiles` receive no type-aware rules, so list every directory with TypeScript sources there.
 
+Legacy plugin APIs are adapted inside the preset with `@eslint/compat`; consumers do not need additional wrappers for CSS Modules.
+
 ```js
 // eslint.config.mjs
 import {

@@ -48,21 +48,6 @@ const BROWSER_ONLY_RULES = {
   'css-modules/no-unused-class': ['warn', CSS_MODULES_OPTIONS],
 };
 
-// eslint-plugin-css-modules still calls context.getFilename(), which ESLint 10 removed.
-const withGetFilename = (rule) => ({
-  ...rule,
-  create: (context) =>
-    rule.create(
-      new Proxy(context, {
-        get: (target, property) => (property === 'getFilename' ? () => target.filename : Reflect.get(target, property)),
-      }),
-    ),
-});
-const cssModulesPlugin = {
-  ...cssModules,
-  rules: Object.fromEntries(Object.entries(cssModules.rules).map(([name, rule]) => [name, withGetFilename(rule)])),
-};
-
 const UNSAFE_RULE_KINDS = ['assignment', 'member-access', 'call', 'argument', 'return'];
 const TEST_FILE_RULES = Object.fromEntries(
   [
@@ -190,7 +175,7 @@ export const createEslintConfig = (options) => {
       ...typescript,
       solid.configs['flat/typescript'],
     ],
-    plugins: { 'css-modules': cssModulesPlugin },
+    plugins: { 'css-modules': cssModules },
     rules: BROWSER_ONLY_RULES,
     typedGlobals: mergeGlobals(options.environments ?? DEFAULT_ENVIRONMENTS),
   });
