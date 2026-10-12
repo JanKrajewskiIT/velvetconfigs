@@ -291,6 +291,8 @@ The full application Dockerfiles remain available for local/Aspire builds with B
 
 Consumers use the versioned v3.5.0 reusable workflows; protect release tags against moving. Library verification uploads velvet-package. Publishing checks archive identity against the checkout and release tag, then publishes that archive with lifecycle scripts disabled. Manual npm publish still runs prepublishOnly.
 
+Package and SPA image transfers use named ZIP artifacts with compression disabled because their contents are already compressed. Keep archive enabled: upload-artifact v7 ignores the configured artifact name when archive is false and uses the uploaded filename instead. The download action extracts the outer ZIP; the verified .tgz or spa-image.tar.gz inside remains unchanged.
+
 NPM_READ_TOKEN is the preferred read-only Actions registry secret. Existing GHCR_TOKEN inputs remain a compatibility fallback; registry authentication still exports that legacy environment variable for existing npm templates. Dependabot's npm registry uses its own NPM_READ_TOKEN secret. Repositories tracking private shared workflows also supply DEPENDABOT_GIT_TOKEN to Dependabot's Git registry. Container registry and SSH deployment retain their existing secrets.
 
 The publisher creates detached Cosign bundles for the verified archive and npm SBOM. npm provenance is disabled by default for GitHub Packages; the provenance input remains an explicit opt-in for a compatible registry. Preserve the signature bundles with each release beyond the 90-day Actions artifact retention.

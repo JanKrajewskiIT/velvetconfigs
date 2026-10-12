@@ -61,7 +61,8 @@ jobs:
         with:
           name: ${{ inputs.image-artifact }}
           path: spa-image.tar.gz
-          archive: false
+          archive: true
+          compression-level: 0
           if-no-files-found: error
           retention-days: 7
     timeout-minutes: 30
