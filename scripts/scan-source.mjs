@@ -12,8 +12,43 @@ mkdirSync(output, { recursive: true });
 const run = (command, args, name, cwd = source) => {
   const result = spawnSync(command, args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   writeFileSync(path.join(output, name), result.stdout ?? '');
-  if (result.stderr) writeFileSync(path.join(output, `${name}.stderr.log`), result.stderr);
-  if (result.error || result.status !== 0) throw new Error(`${check} failed; inspect the restricted ${name} artifact.`);
+  writeFileSync(path.join(output, `${name}.stderr.log`), result.stderr ?? '');
+  if (result.error || result.status !== 0) {
+    let termination = `exit code ${result.status}`;
+    if (result.error) termination = `spawn error ${result.error.code}`;
+    else if (result.signal) termination = `signal ${result.signal}`;
+    throw new Error(
+      `${check} failed (${termination}); inspect the restricted ${name} and ${name}.stderr.log artifacts.`,
+    );
+  }
+};
+const summarizeWorkflowFindings = () => {
+  let findings;
+  try {
+    findings = JSON.parse(readFileSync(path.join(output, 'zizmor.json'), 'utf8'));
+  } catch {
+    return 'Zizmor did not produce valid JSON; inspect zizmor.json.stderr.log for scanner diagnostics.';
+  }
+  if (!Array.isArray(findings)) return 'Unexpected Zizmor report format; inspect the restricted artifacts.';
+  const summary = [];
+  for (const finding of findings) {
+    if (finding?.ignored !== false || finding.determinations?.severity !== 'High') continue;
+    if (typeof finding.ident !== 'string' || !/^[a-z][a-z0-9-]{0,80}$/.test(finding.ident)) continue;
+    if (!Array.isArray(finding.locations)) continue;
+    for (const location of finding.locations) {
+      if (location?.symbolic?.kind !== 'Primary') continue;
+      const file = location.symbolic.key?.Local?.verbatim_path;
+      const row = location.concrete?.location?.start_point?.row;
+      if (typeof file !== 'string' || !Number.isSafeInteger(row) || row < 0) continue;
+      const match = /(?:^|\/)\.github\/workflows\/([a-zA-Z0-9_.-]+\.ya?ml)$/.exec(file);
+      if (match) summary.push(`${finding.ident}: .github/workflows/${match[1]}:${row + 1}`);
+    }
+  }
+  const locations = [...new Set(summary)];
+  if (!locations.length) return 'No reportable High finding locations; inspect the restricted artifacts for details.';
+  const lines = ['Zizmor High findings (rule and location only):', ...locations.slice(0, 20)];
+  if (locations.length > 20) lines.push('Additional locations are in zizmor.json.');
+  return lines.join('\n');
 };
 switch (check) {
   case 'secrets': {
@@ -115,13 +150,13 @@ switch (check) {
           '--min-severity',
           'high',
           '--format',
-          'json',
+          'json-v1',
           '/src/.github/workflows',
         ],
         'zizmor.json',
       );
     } catch (error) {
-      failures.push(error.message);
+      failures.push(`${error.message}\n${summarizeWorkflowFindings()}`);
     }
     if (failures.length) throw new Error(failures.join('\n'));
     break;
