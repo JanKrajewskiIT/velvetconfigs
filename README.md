@@ -259,6 +259,8 @@ Use Node 26 from both version files and the exact npm version in packageManager.
 
 Open frontend.code-workspace for the shared editor setup. It enables the TypeScript 7 extension against node_modules/@typescript/native and uses Prettier for formatting, ESLint for code actions, and Stylelint for CSS. npm run editor:sync regenerates this owned file; npm run editor:check detects drift. Agent-managed .vscode/settings.json is left intact.
 
+The generated frontend.code-workspace is strict JSON. The shared Prettier preset selects its JSON parser for this filename, keeping formatter output readable by editor:check. Keep comments and trailing commas out of this generated file; put custom editor settings in the project-owned configuration.
+
 Lint scripts and staged tasks enforce zero warnings. CI runs npm run audit:deps separately from the offline verification gate. High and critical advisories block it unless they match the shared security/audit-policy.json exception exactly. The existing braces exception expires on 2026-11-12; it must be removed or explicitly reviewed by then. Audit or registry failures also block verification.
 
 ### Libraries and configuration types

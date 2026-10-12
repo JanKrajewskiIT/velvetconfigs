@@ -1,20 +1,20 @@
 {
   "folders": [
     {
-      "path": ".",
-    },
+      "path": "."
+    }
   ],
   "settings": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit",
+      "source.fixAll.eslint": "explicit"
     },
     "eslint.useFlatConfig": true,
     "eslint.workingDirectories": [
       {
-        "mode": "auto",
-      },
+        "mode": "auto"
+      }
     ],
     "js/ts.experimental.useTsgo": true,
     "js/ts.tsdk.path": "./node_modules/@typescript/native",
@@ -25,8 +25,8 @@
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
     "[markdown]": {
-      "files.trimTrailingWhitespace": false,
-    },
+      "files.trimTrailingWhitespace": false
+    }
   },
   "extensions": {
     "recommendations": [
@@ -34,7 +34,7 @@
       "esbenp.prettier-vscode",
       "stylelint.vscode-stylelint",
       "TypeScriptTeam.native-preview",
-      "editorconfig.editorconfig",
-    ],
-  },
+      "editorconfig.editorconfig"
+    ]
+  }
 }
