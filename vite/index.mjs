@@ -4,13 +4,22 @@ import path from 'node:path';
 import { mergeConfig, normalizePath } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 
+import appTsconfig from '../tsconfig/app.json' with { type: 'json' };
+
 const DEFAULT_ALIAS = '~';
 const DEFAULT_SRC_DIR = 'src';
 const DEFAULT_API_PROXY_ENV_VAR = 'VITE_API_BASE_URL';
 const DEFAULT_API_PROXY_PATH = '/api';
 const DEFAULT_API_PROXY_TARGET = 'http://localhost:5000';
 const DEFAULT_LIB_FORMATS = ['es'];
-const DEFAULT_LIB_TARGET = 'esnext';
+const LIB_FORMATS = {
+  es: { extension: 'mjs', declarationFormat: 'esm' },
+  cjs: { extension: 'cjs', declarationFormat: 'cjs' },
+  umd: { extension: 'umd.js' },
+  iife: { extension: 'iife.js' },
+};
+const DEFAULT_LIB_TARGET = appTsconfig.compilerOptions.target.toLowerCase();
+const DEFAULT_OUT_DIR = 'dist';
 const REQUIRED_LINKED_WORKSPACE_FIELDS = ['workspacePath', 'packageName'];
 const DEDUPED_ARRAY_PATHS = [
   ['optimizeDeps', 'include'],
@@ -18,7 +27,7 @@ const DEDUPED_ARRAY_PATHS = [
   ['resolve', 'dedupe'],
 ];
 
-const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
+const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
 
 const resolveCallable = (moduleExport, specifier) => {
   const candidates = [moduleExport, moduleExport?.default, moduleExport?.default?.default];
@@ -140,51 +149,75 @@ export const createSolidAppViteConfig = (userConfig = {}, options = {}) => {
   );
 };
 
-export const readPeerDependencies = (packageJsonPath = path.resolve(process.cwd(), 'package.json')) => {
-  try {
-    const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-    const names = [...Object.keys(manifest.peerDependencies ?? {}), ...Object.keys(manifest.dependencies ?? {})];
-    return [...new Set(names)];
-  } catch {
-    // Contract: an unreadable manifest degrades to explicit externals instead of failing the config load.
-    return [];
+export const readPackageDependencies = (packageJsonPath = path.resolve(process.cwd(), 'package.json')) => {
+  const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+  if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    throw new TypeError('Package manifest must be an object.');
   }
+  const names = ['peerDependencies', 'dependencies'].flatMap((key) => {
+    const dependencies = manifest[key];
+    if (dependencies === undefined) return [];
+    if (dependencies === null || typeof dependencies !== 'object' || Array.isArray(dependencies)) {
+      throw new TypeError(`Package manifest ${key} must be a dependency map.`);
+    }
+    return Object.keys(dependencies);
+  });
+  return [...new Set(names)];
 };
+
+export const readPeerDependencies = readPackageDependencies;
 
 const createExternalMatcher = (packages) => {
   if (packages.length === 0) {
-    return (id) => id.includes('node_modules');
+    return () => false;
   }
   const names = packages.map((name) => RegExp.escape(name)).join('|');
-  const packagePattern = new RegExp(`^(?:${names})(?:/.*)?$`, 'u');
-  return (id) => id.includes('node_modules') || packagePattern.test(id);
+  const packagePattern = new RegExp(`(?:^|/node_modules/)(?:${names})(?:/|$)`, 'u');
+  return (id) => packagePattern.test(normalizePath(id));
 };
 
 const toPosixPath = (value) => value.replaceAll('\\', '/');
 
-const createEntryFileNames = (preserveModulesRoot, qualifyWithFormat) => {
+const moduleExtension = (format) => LIB_FORMATS[format].extension;
+
+const createEntryFileNames = (preserveModulesRoot) => {
   const rootPrefix = `${toPosixPath(preserveModulesRoot).replace(/\/$/u, '')}/`;
-  const extension = qualifyWithFormat ? '.[format].js' : '.js';
-  return ({ name }) => {
-    const posixName = toPosixPath(name);
-    return `${posixName.startsWith(rootPrefix) ? posixName.slice(rootPrefix.length) : posixName}${extension}`;
-  };
+  return (format) =>
+    ({ name }) => {
+      const posixName = toPosixPath(name);
+      return `${posixName.startsWith(rootPrefix) ? posixName.slice(rootPrefix.length) : posixName}.${moduleExtension(format)}`;
+    };
 };
 
 const buildOutputOptions = ({ preserveModules, preserveModulesRoot, formats }) => {
-  if (!preserveModules) {
-    return { preserveModules };
-  }
-  const entryFileNames = createEntryFileNames(preserveModulesRoot, formats.length > 1);
-  return { preserveModules, preserveModulesRoot, entryFileNames };
+  const fileNames = createEntryFileNames(preserveModulesRoot);
+  return formats.map((format) => ({
+    format,
+    preserveModules,
+    ...(preserveModules ? { preserveModulesRoot, entryFileNames: fileNames(format) } : {}),
+  }));
 };
 
-const loadDtsPlugin = async (dts) => {
+const loadDtsPlugin = async (dts, formats, projectRoot, outDir) => {
   if (dts === false) {
     return null;
   }
+  if (dts?.rollupTypes !== undefined || dts?.outDir !== undefined) {
+    throw new TypeError('vite-plugin-dts 5 uses "bundleTypes" and "outDirs"; migrate the legacy options.');
+  }
+  if (formats.some((format) => LIB_FORMATS[format].declarationFormat === undefined) && dts?.outDirs === undefined) {
+    throw new TypeError('Non-module library formats require explicit "dts.outDirs".');
+  }
   const createDtsPlugin = resolveCallable(await import('vite-plugin-dts'), 'vite-plugin-dts');
-  return createDtsPlugin({ insertTypesEntry: true, ...dts });
+  return createDtsPlugin({
+    insertTypesEntry: true,
+    outDirs: formats.map((format) => ({
+      dir: path.resolve(projectRoot, outDir),
+      moduleFormat: LIB_FORMATS[format].declarationFormat,
+    })),
+    ...dts,
+    compilerOptions: { declarationMap: false, ...dts?.compilerOptions },
+  });
 };
 
 export const createSolidLibViteConfig = async (userConfig = {}, options = {}) => {
@@ -195,7 +228,7 @@ export const createSolidLibViteConfig = async (userConfig = {}, options = {}) =>
     entry = `${srcDir}/index.ts`,
     formats = DEFAULT_LIB_FORMATS,
     externalPackages = [],
-    externalizeFromPackageJson = false,
+    externalizeFromPackageJson = true,
     preserveModules = true,
     preserveModulesRoot = srcDir,
     cssCodeSplit = false,
@@ -206,13 +239,28 @@ export const createSolidLibViteConfig = async (userConfig = {}, options = {}) =>
   if (!isNonEmptyString(fileName)) {
     throw new TypeError('createSolidLibViteConfig: "fileName" is required and must be a non-empty string.');
   }
+  if (
+    !Array.isArray(formats) ||
+    formats.length === 0 ||
+    formats.some((format) => typeof format !== 'string' || !Object.hasOwn(LIB_FORMATS, format)) ||
+    new Set(formats).size !== formats.length
+  ) {
+    throw new TypeError(
+      `createSolidLibViteConfig: "formats" must contain distinct values from ${Object.keys(LIB_FORMATS).join(', ')}.`,
+    );
+  }
+  if (userConfig.build?.lib?.formats !== undefined) {
+    throw new TypeError(
+      'Set library formats through the factory options so JavaScript and declarations use the same formats.',
+    );
+  }
   const projectRoot = resolveProjectRoot(options.projectRoot);
   const externals = externalizeFromPackageJson
-    ? [...new Set([...externalPackages, ...readPeerDependencies(path.resolve(projectRoot, 'package.json'))])]
+    ? [...new Set([...externalPackages, ...readPackageDependencies(path.resolve(projectRoot, 'package.json'))])]
     : externalPackages;
 
   const plugins = [createSolidPlugin(solidPluginOptions)];
-  const dtsPlugin = await loadDtsPlugin(dts);
+  const dtsPlugin = await loadDtsPlugin(dts, formats, projectRoot, userConfig.build?.outDir ?? DEFAULT_OUT_DIR);
   if (dtsPlugin !== null) {
     plugins.push(dtsPlugin);
   }
@@ -225,7 +273,10 @@ export const createSolidLibViteConfig = async (userConfig = {}, options = {}) =>
         build: {
           target,
           cssCodeSplit,
-          lib: { entry: path.resolve(projectRoot, entry), fileName, formats: [...formats] },
+          lib: {
+            entry: path.resolve(projectRoot, entry),
+            fileName: (format) => `${fileName}.${moduleExtension(format)}`,
+          },
           rollupOptions: {
             external: createExternalMatcher(externals),
             output: buildOutputOptions({ preserveModules, preserveModulesRoot, formats }),

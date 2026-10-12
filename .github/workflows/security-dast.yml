@@ -1,0 +1,49 @@
+name: Staging DAST
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        default: baseline
+    secrets:
+      CONFIGS_READ_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    environment: security-testing
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: JanKrajewskiIT/velvetconfigs
+          ref: v3.5.0
+          path: tooling
+          persist-credentials: false
+          token: ${{ secrets.CONFIGS_READ_TOKEN || github.token }}
+          sparse-checkout: |
+            scripts
+            security
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '26'
+      - name: Scan allowlisted staging environment
+        env:
+          DAST_MODE: ${{ inputs.mode }}
+          DAST_HOST: ${{ vars.DAST_HOST }}
+          DAST_API_HOST: ${{ vars.DAST_API_HOST || vars.DAST_HOST }}
+          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL }}
+          DAST_OPENAPI_URL: ${{ vars.DAST_OPENAPI_URL }}
+        run: node tooling/scripts/dast.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: ${{ !cancelled() }}
+        with:
+          name: staging-dast
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 7

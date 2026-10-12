@@ -1,0 +1,66 @@
+name: Scan published images
+
+on:
+  workflow_call:
+    inputs:
+      images:
+        description: JSON array of image references; scanned without rebuilding.
+        type: string
+        required: true
+    secrets:
+      CONFIGS_READ_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(inputs.images) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: JanKrajewskiIT/velvetconfigs
+          ref: v3.5.0
+          path: tooling
+          persist-credentials: false
+          token: ${{ secrets.CONFIGS_READ_TOKEN || github.token }}
+          sparse-checkout: |
+            scripts
+            security
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '26'
+      - run: node tooling/scripts/security-tools.mjs trivy
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Scan current published image
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE")
+          node tooling/scripts/scan-image.mjs "$digest" reports
+      - name: Name image report
+        if: ${{ !cancelled() }}
+        id: report
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: echo "name=$(printf '%s' "$IMAGE" | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: ${{ !cancelled() }}
+        with:
+          name: image-security-${{ steps.report.outputs.name }}
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 7

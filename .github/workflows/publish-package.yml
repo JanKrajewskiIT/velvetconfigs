@@ -1,76 +1,120 @@
-name: Publish package
-
+name: Publish verified package
 on:
   workflow_call:
+    inputs:
+      artifact-name:
+        type: string
+        default: velvet-package
+      provenance:
+        description: Explicit opt-in for registries supporting npm provenance; GitHub Packages uses detached Cosign bundles.
+        type: boolean
+        default: false
     secrets:
       GHCR_TOKEN:
         required: false
-
+      CONFIGS_READ_TOKEN:
+        required: false
 jobs:
-  check-version:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      version: ${{ steps.manifest.outputs.version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Check release tag and package version
-        id: manifest
-        shell: bash
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
-          if [[ ! "$RELEASE_TAG" =~ $semver ]]; then
-            echo "::error::Release tag $RELEASE_TAG must match v<semver>."
-            exit 1
-          fi
-          package_version="$(node -p "require('./package.json').version")"
-          if [[ "${RELEASE_TAG#v}" != "$package_version" ]]; then
-            echo "::error::package.json version $package_version does not match tag $RELEASE_TAG"
-            exit 1
-          fi
-          echo "version=$package_version" >> "$GITHUB_OUTPUT"
-
   publish:
-    needs: check-version
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       id-token: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc
           registry-url: https://npm.pkg.github.com
           scope: '@jankrajewskiit'
-          cache: npm
-
-      - name: Install dependencies
+      - name: Select declared npm
+        run: npm install --global "$(node -p "require('./package.json').packageManager")" --ignore-scripts --registry https://registry.npmjs.org
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: .artifacts
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: npm-sbom
+          path: .artifacts/sbom
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: github.repository != 'JanKrajewskiIT/velvetconfigs'
+        with:
+          repository: JanKrajewskiIT/velvetconfigs
+          ref: v3.5.0
+          path: tooling
+          persist-credentials: false
+          token: ${{ secrets.CONFIGS_READ_TOKEN || github.token }}
+          sparse-checkout: |
+            scripts
+            security
+      - name: Select local signing tools
+        if: github.repository == 'JanKrajewskiIT/velvetconfigs'
+        run: |
+          mkdir tooling
+          cp -R scripts security tooling/
+      - name: Install checksum-pinned signer
+        run: node tooling/scripts/security-tools.mjs cosign
+      - name: Check release and archive identity
+        id: package
+        shell: bash
         env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
-          NODE_AUTH_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
-        run: npm ci
-
-      - name: Publish package
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+          [[ "$RELEASE_TAG" =~ $semver ]] || { echo '::error::Release tag must be v<semver>.'; exit 1; }
+          mapfile -t archives < <(find .artifacts -maxdepth 1 -name '*.tgz' -type f)
+          [[ ${#archives[@]} -eq 1 ]] || { echo '::error::Expected one verified archive.'; exit 1; }
+          tar -xOf "${archives[0]}" package/package.json > .artifacts/manifest.json
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const source = JSON.parse(readFileSync('package.json', 'utf8'));
+          const archive = JSON.parse(readFileSync('.artifacts/manifest.json', 'utf8'));
+          assert.equal(archive.name, source.name, 'Archive package name differs from the checkout.');
+          assert.equal(archive.version, source.version, 'Archive version differs from the checkout.');
+          assert.equal(source.version, process.env.RELEASE_TAG.slice(1), 'Release tag differs from package.json.');
+          NODE
+          echo "archive=${archives[0]}" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Sign verified archive and dependency SBOM
+        env:
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+        run: |
+          cosign sign-blob --yes --bundle "$ARCHIVE.sigstore.json" "$ARCHIVE"
+          cosign sign-blob --yes --bundle .artifacts/sbom/npm-sbom.cdx.json.sigstore.json .artifacts/sbom/npm-sbom.cdx.json
+      - name: Upload release signature bundles
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: package-signatures
+          path: |
+            .artifacts/**/*.sigstore.json
+            .artifacts/sbom/npm-sbom.cdx.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish verified archive
         shell: bash
         env:
           GHCR_TOKEN: ${{ github.token }}
           NODE_AUTH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.check-version.outputs.version }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+          VERSION: ${{ steps.package.outputs.version }}
+          PROVENANCE: ${{ inputs.provenance }}
         run: |
+          set -euo pipefail
+          arguments=("$ARCHIVE" --ignore-scripts --access public)
+          if [[ "$PROVENANCE" == true ]]; then arguments+=(--provenance); fi
           if [[ "$VERSION" == *-* ]]; then
             channel="${VERSION#*-}"
             channel="${channel%%.*}"
-            npm publish --provenance --access public --tag "$channel"
-          else
-            npm publish --provenance --access public
+            channel="${channel%%+*}"
+            arguments+=(--tag "$channel")
           fi
+          npm publish "${arguments[@]}"
+permissions:
+  contents: read

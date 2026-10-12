@@ -1,0 +1,42 @@
+rules:
+  - id: velvet-dynamic-code
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Replace dynamic code execution with a typed operation.
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+  - id: velvet-shell-interpolation
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Pass arguments through execFile or spawn with shell disabled.
+    patterns:
+      - pattern-either:
+          - pattern: exec(`...${$VALUE}...`, ...)
+          - pattern: execSync(`...${$VALUE}...`, ...)
+  - id: velvet-tls-bypass
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: TLS certificate verification must remain enabled.
+    pattern: '{ ..., rejectUnauthorized: false, ... }'
+  - id: velvet-dotnet-certificate-bypass
+    languages: [csharp]
+    severity: ERROR
+    message: Do not accept every remote TLS certificate.
+    pattern-either:
+      - pattern: $HANDLER.ServerCertificateCustomValidationCallback = (...) => true;
+      - pattern: $HANDLER.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+  - id: velvet-dotnet-raw-sql-interpolation
+    languages: [csharp]
+    severity: ERROR
+    message: Use parameterized SQL or the interpolated SQL API.
+    pattern-either:
+      - pattern: $DB.FromSqlRaw($"...", ...)
+      - pattern: $DB.ExecuteSqlRaw($"...", ...)
+  - id: velvet-weak-crypto
+    languages: [csharp]
+    severity: WARNING
+    message: Review MD5/SHA1 usage; they are unsuitable for security-sensitive hashing.
+    pattern-either:
+      - pattern: MD5.Create(...)
+      - pattern: SHA1.Create(...)

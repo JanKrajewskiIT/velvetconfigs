@@ -9,4 +9,11 @@ husky/                 @jankrajewskiit
 lint-staged/            @jankrajewskiit
 .github/workflows/     @jankrajewskiit
 .github/dependabot.yml @jankrajewskiit
-specs/                 @jankrajewskiit
+specs/                 @jankrajewskiit/.github/workflows/ @JanKrajewskiIT
+/.github/dependabot.yml @JanKrajewskiIT
+/security/ @JanKrajewskiIT
+/scripts/ @JanKrajewskiIT
+/deploy/ @JanKrajewskiIT
+/.gitleaks* @JanKrajewskiIT
+/.semgrep* @JanKrajewskiIT
+/SECURITY.md @JanKrajewskiIT

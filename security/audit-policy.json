@@ -1,0 +1,11 @@
+{
+  "exceptions": [
+    {
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "severity": "high",
+      "expires": "2026-11-12",
+      "reason": "No patched release as of 2026-10-12. Build tooling uses repository-owned glob patterns; review or remove this exception by its expiry."
+    }
+  ]
+}

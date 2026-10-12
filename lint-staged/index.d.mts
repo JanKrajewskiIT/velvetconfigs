@@ -1,13 +1,35 @@
 export interface CreateLintStagedConfigOptions {
-  readonly eslintTarget?: string;
-  readonly prettierTarget?: string;
-  readonly stylelintTarget?: string;
+  readonly eslintTarget?: string | false;
+  readonly prettierTarget?: string | false;
+  readonly stylelintTarget?: string | false;
+  readonly chunkSize?: number;
+  readonly maxCommandLength?: number;
+  readonly ignorePaths?: readonly RegExp[];
 }
 
-export type LintStagedConfig = Record<string, string[]>;
+export type LintStagedTask = (files: readonly string[]) => string[];
 
-export declare const createLintStagedConfig: (options?: CreateLintStagedConfigOptions) => LintStagedConfig;
+export type StaticLintStagedConfig = Record<string, string[]>;
 
-export declare const lintStagedConfig: LintStagedConfig;
+export type ChunkedLintStagedConfig = Record<string, LintStagedTask>;
+
+export type LintStagedConfig = Record<string, string[] | LintStagedTask>;
+
+export type StaticLintStagedConfigOptions = CreateLintStagedConfigOptions & {
+  readonly chunkSize?: undefined;
+  readonly maxCommandLength?: undefined;
+  readonly ignorePaths?: undefined;
+};
+
+export declare const createLintStagedConfig: {
+  (options?: StaticLintStagedConfigOptions): StaticLintStagedConfig;
+  (options: CreateLintStagedConfigOptions): LintStagedConfig;
+};
+
+export declare const createChunkedLintStagedConfig: (
+  options?: CreateLintStagedConfigOptions,
+) => ChunkedLintStagedConfig;
+
+export declare const lintStagedConfig: StaticLintStagedConfig;
 
 export default lintStagedConfig;

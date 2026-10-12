@@ -1,32 +1,23 @@
 name: Verify
-
 on:
   workflow_call:
     secrets:
       GHCR_TOKEN:
         required: false
-
+      NPM_READ_TOKEN:
+        required: false
+      CONFIGS_READ_TOKEN:
+        required: false
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/verify-package.yml
+    with:
+      package-artifact: velvet-package
     permissions:
       contents: read
       packages: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          registry-url: https://npm.pkg.github.com
-          scope: '@jankrajewskiit'
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GHCR_TOKEN }}
-      - name: Audit
-        run: npm audit --audit-level=critical
-      - name: Verify package
-        run: npm run verify
+    secrets:
+      NPM_READ_TOKEN: ${{ secrets.NPM_READ_TOKEN || secrets.GHCR_TOKEN }}
+      CONFIGS_READ_TOKEN: ${{ secrets.CONFIGS_READ_TOKEN }}
+permissions:
+  contents: read

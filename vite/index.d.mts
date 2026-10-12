@@ -78,6 +78,8 @@ export declare const createSolidLibViteConfig: (
   options: CreateSolidLibViteConfigOptions,
 ) => Promise<UserConfig>;
 
-export declare const readPeerDependencies: (packageJsonPath?: string) => string[];
+export declare const readPackageDependencies: (packageJsonPath?: string) => string[];
+/** @deprecated Use readPackageDependencies; this alias also includes regular dependencies. */
+export declare const readPeerDependencies: typeof readPackageDependencies;
 
-export type { BuildOptions, LibraryFormats, SolidPluginOptions, UserConfig };
+export type { BuildOptions, DtsPluginOptions, LibraryFormats, SolidPluginOptions, UserConfig };

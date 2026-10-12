@@ -1,2 +1,6 @@
 .agents/
 package-lock.json
+
+.artifacts/
+
+.deployment/

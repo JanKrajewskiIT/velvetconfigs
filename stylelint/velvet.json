@@ -1,0 +1,13 @@
+{
+  "extends": "./index.json",
+  "rules": {
+    "selector-class-pattern": [
+      "^vui-[a-z0-9]+(-[a-z0-9]+)*(__[a-z0-9]+(-[a-z0-9]+)*)?(--[a-z0-9]+(-[a-z0-9]+)*)?$",
+      { "message": "Expected class selector to follow the vui-block__element--modifier convention" }
+    ],
+    "keyframes-name-pattern": [
+      "^vui-[a-z0-9]+(-[a-z0-9]+)*$",
+      { "message": "Expected keyframe name to follow the vui-kebab-case convention" }
+    ]
+  }
+}

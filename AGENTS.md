@@ -27,6 +27,7 @@
   - `.agents/rules/css-modules-conventions.md` for CSS Modules.
   - `.agents/rules/frontend-accessibility.md` for user interfaces.
   - `.agents/rules/tooling-config-conventions.md` for linter, formatter, compiler, bundler, Git hook, web server, and CI configuration.
+  - `.agents/rules/ci-supply-chain.md` for CI security gates, artifact transfer, package publication, image delivery, and deployment configuration.
 - Do not load unrelated stack rules.
 
 ## Execution

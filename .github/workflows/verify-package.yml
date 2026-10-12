@@ -1,39 +1,125 @@
 name: Verify package
-
 on:
   workflow_call:
+    inputs:
+      working-directory:
+        type: string
+        default: .
+      node-version-file:
+        type: string
+        default: .nvmrc
+      verify-env:
+        description: JSON object of public build environment variables.
+        type: string
+        default: '{}'
+      package-artifact:
+        description: Name for the verified npm archive; empty disables packing.
+        type: string
+        default: ''
+      spa-artifact:
+        description: Name for the generated .deployment/spa runtime context.
+        type: string
+        default: ''
+      dockerfile-check:
+        description: Run Docker build checks on the local full application recipe without executing its build.
+        type: boolean
+        default: false
     secrets:
       GHCR_TOKEN:
         required: false
-
+      NPM_READ_TOKEN:
+        required: false
+      CONFIGS_READ_TOKEN:
+        required: false
 permissions:
   contents: read
   packages: read
-
 jobs:
   verify:
     runs-on: ubuntu-latest
-    env:
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
-      NODE_AUTH_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
+    env: ${{ fromJSON(inputs.verify-env) }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          node-version-file: .nvmrc
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
           registry-url: https://npm.pkg.github.com
           scope: '@jankrajewskiit'
           cache: npm
-
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+      - name: Select declared npm
+        run: npm install --global "$(node -p "require('./package.json').packageManager")" --ignore-scripts --registry https://registry.npmjs.org
       - name: Install dependencies
-        run: npm ci
-
-      - name: Audit
-        # Spec 19 window for GHSA-vfj7-8cjw-p6xm (braces, no fix); restore --audit-level=high when fixed.
-        run: npm audit --audit-level=critical
-
+        run: npm ci --ignore-scripts
+        env:
+          GHCR_TOKEN: ${{ secrets.NPM_READ_TOKEN || secrets.GHCR_TOKEN || github.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_READ_TOKEN || secrets.GHCR_TOKEN || github.token }}
+      - name: Audit dependencies
+        run: npm run audit:deps
+        env:
+          GHCR_TOKEN: ${{ secrets.NPM_READ_TOKEN || secrets.GHCR_TOKEN || github.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_READ_TOKEN || secrets.GHCR_TOKEN || github.token }}
+      - name: Check local Docker recipe
+        if: inputs.dockerfile-check
+        run: docker build --check .
+      - name: Generate npm dependency SBOM
+        run: |
+          mkdir -p .artifacts
+          npm sbom --sbom-format=cyclonedx --package-lock-only > .artifacts/npm-sbom.cdx.json
+      - name: Upload npm dependency SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: npm-sbom
+          path: ${{ inputs.working-directory }}/.artifacts/npm-sbom.cdx.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
+      - name: Report unused dependencies and exports
+        run: npm run --silent deps:check > .artifacts/knip.json
+      - name: Upload unused-code report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: unused-code
+          path: ${{ inputs.working-directory }}/.artifacts/knip.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify
         run: npm run verify
+      - name: Pack verified package
+        if: inputs.package-artifact != ''
+        run: |
+          mkdir -p .artifacts
+          npm pack --ignore-scripts --pack-destination .artifacts
+      - name: Upload package
+        if: inputs.package-artifact != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.package-artifact }}
+          path: ${{ inputs.working-directory }}/.artifacts/*.tgz
+          archive: false
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload SPA runtime context
+        if: inputs.spa-artifact != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.spa-artifact }}
+          path: ${{ inputs.working-directory }}/.deployment/spa/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+    needs: security
+    timeout-minutes: 30
+  security:
+    uses: ./.github/workflows/security-source.yml
+    permissions:
+      contents: read
+    secrets:
+      CONFIGS_READ_TOKEN: ${{ secrets.CONFIGS_READ_TOKEN }}

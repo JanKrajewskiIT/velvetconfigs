@@ -13,13 +13,11 @@ Thumbs.db
 /.claude/rules/
 /.cursor/rules/
 /.github/instructions/
-
 /.claude/settings.json
 /.codex/config.toml
 /.cursor/cli.json
 /.cursor/permissions.json
 /.vscode/settings.json
-
 /AGENTS.md
 /CLAUDE.md
 /.claude
@@ -27,4 +25,5 @@ Thumbs.db
 /.cursor
 /.github/skills
 /.github/instructions
-/.vscode/settings.json
+.artifacts/
+.deployment/

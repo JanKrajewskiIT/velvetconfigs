@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig/node-vite.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "ESNext.Disposable", "DOM", "DOM.Iterable"],
+    "skipLibCheck": false
+  },
+  "include": ["eslint/**/*.d.mts", "vite/**/*.d.mts", "lint-staged/**/*.d.mts", "env/**/*.d.mts", "nginx/**/*.d.mts"]
+}
