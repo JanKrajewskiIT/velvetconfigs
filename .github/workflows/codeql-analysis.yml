@@ -1,0 +1,81 @@
+name: CodeQL analysis
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        type: string
+        default: .
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL security and quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Configure security and reliability analysis
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          source-root: ${{ inputs.working-directory }}
+          config: |
+            name: Velvet security and quality
+            queries:
+              - uses: security-and-quality
+            paths-ignore:
+              - '**/node_modules/**'
+              - '**/dist/**'
+              - '**/build/**'
+              - '**/reports/**'
+              - '**/.agents/**'
+              - '**/.deployment/**'
+              - '**/api/schema/**'
+              - '**/api-contracts/**'
+              - '**/velvet/**'
+      - name: Analyze without installing or building the application
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          category: velvet/javascript-security-and-quality
+          output: codeql-results
+          upload-database: false
+          wait-for-processing: true
+      - name: Block high security findings and quality errors
+        run: |
+          node --input-type=module <<'NODE'
+          import { readdirSync, readFileSync } from 'node:fs';
+          const files = readdirSync('codeql-results').filter((name) => name.endsWith('.sarif'));
+          if (!files.length) throw new Error('Missing CodeQL report.');
+          let blocked = 0;
+          for (const file of files) {
+            const report = JSON.parse(readFileSync(`codeql-results/${file}`, 'utf8'));
+            if (!Array.isArray(report.runs) || !report.runs.length) throw new Error('Invalid CodeQL report.');
+            for (const run of report.runs) {
+              if (!Array.isArray(run.results) || !Array.isArray(run.tool?.driver?.rules))
+                throw new Error('Incomplete CodeQL report.');
+              if (run.invocations?.some((item) => item.executionSuccessful === false))
+                throw new Error('CodeQL execution failed.');
+              const rules = run.tool.driver.rules;
+              for (const result of run.results) {
+                const rule = rules.find((item) => item.id === result.ruleId);
+                if (!rule) throw new Error('Unknown CodeQL rule.');
+                const security = rule.properties?.['security-severity'];
+                const level = result.level ?? rule.defaultConfiguration?.level;
+                if (security !== undefined && !Number.isFinite(Number(security)))
+                  throw new Error('Invalid security severity.');
+                if (Number(security) >= 7 || (security === undefined && level === 'error')) blocked += 1;
+              }
+            }
+          }
+          if (blocked) throw new Error(`${blocked} blocking CodeQL findings. Inspect GitHub code scanning.`);
+          NODE

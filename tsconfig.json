@@ -4,5 +4,13 @@
     "lib": ["ES2024", "ESNext.Disposable", "DOM", "DOM.Iterable"],
     "skipLibCheck": false
   },
-  "include": ["eslint/**/*.d.mts", "vite/**/*.d.mts", "lint-staged/**/*.d.mts", "env/**/*.d.mts", "nginx/**/*.d.mts"]
+  "include": [
+    "eslint/**/*.d.mts",
+    "vite/**/*.d.mts",
+    "lint-staged/**/*.d.mts",
+    "env/**/*.d.mts",
+    "nginx/**/*.d.mts",
+    "browser/**/*.d.mts",
+    "quality/**/*.d.mts"
+  ]
 }

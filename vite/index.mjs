@@ -137,9 +137,12 @@ const buildLinkedWorkspaceConfig = (linkedWorkspace, projectRoot) => {
 export const createSolidAppViteConfig = (userConfig = {}, options = {}) => {
   const { alias = DEFAULT_ALIAS, srcDir = DEFAULT_SRC_DIR, port, host, solidPluginOptions, apiProxy } = options;
   const projectRoot = resolveProjectRoot(options.projectRoot);
+  const { version } = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   return dedupeConfigArrays(
     mergeLayers([
       { plugins: [createSolidPlugin(solidPluginOptions)] },
+      { build: { manifest: true } },
+      { define: { __VELVET_APP_VERSION__: JSON.stringify(version) } },
       buildAliasConfig({ alias, projectRoot, srcDir }),
       buildServerConfig({ port, host }),
       buildApiProxyConfig(apiProxy),
@@ -165,6 +168,10 @@ export const readPackageDependencies = (packageJsonPath = path.resolve(process.c
   return [...new Set(names)];
 };
 
+/**
+ * @deprecated Use readPackageDependencies; this alias also includes regular dependencies.
+ * @alias readPackageDependencies
+ */
 export const readPeerDependencies = readPackageDependencies;
 
 const createExternalMatcher = (packages) => {

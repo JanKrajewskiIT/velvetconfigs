@@ -32,4 +32,8 @@ export declare const createChunkedLintStagedConfig: (
 
 export declare const lintStagedConfig: StaticLintStagedConfig;
 
+/**
+ * Retains the published default export alongside the named configuration.
+ * @alias lintStagedConfig
+ */
 export default lintStagedConfig;

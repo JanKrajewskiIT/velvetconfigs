@@ -6,10 +6,24 @@
     "lint-staged/index.mjs!",
     "env/index.mjs!",
     "nginx/index.mjs!",
-    "scripts/*.mjs!"
+    "browser/index.mjs!",
+    "scripts/*.mjs!",
+    "quality/index.mjs!"
   ],
-  "project": ["src/**/*.{ts,tsx}", "*.{ts,mjs}", "scripts/*.mjs"],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "*.{ts,mjs}",
+    "scripts/*.mjs",
+    "quality/**/*.mjs",
+    "eslint/**/*.mjs",
+    "vite/**/*.mjs",
+    "env/**/*.mjs",
+    "lint-staged/**/*.mjs",
+    "nginx/**/*.mjs",
+    "browser/**/*.mjs"
+  ],
   "ignore": [".agents/**", "dist/**", ".deployment/**"],
-  "ignoreDependencies": ["@typescript/native"],
+  "ignoreDependencies": ["@typescript/native", "dependency-cruiser", "jscpd", "lint-staged"],
+  "ignoreBinaries": ["trivy"],
   "includeEntryExports": false
 }

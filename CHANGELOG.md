@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.6.0
+
+- Add consumer-owned architecture and duplication policies, blocking Knip reports, strict detached Promise handling, justified lint suppressions and opt-in licensed CodeQL security/quality workflows.
+- Add guarded Vite fragment recovery, structured browser diagnostics and shared Web Vitals subscriptions.
+- Report initial/lazy application bundle sizes and optional measured byte budgets from the built Vite manifest.
+- Package partial library styles and include private performance reports in SPA artifacts without serving build metadata.
+
 ## 3.5.0 (unreleased)
 
 - Add shared source/image security gates, CycloneDX SBOMs, pinned CI tooling, periodic security scans and Knip reports without changing the package version.

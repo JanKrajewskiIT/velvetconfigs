@@ -79,18 +79,16 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 90
-      - name: Report unused dependencies and exports
-        run: npm run --silent deps:check > .artifacts/knip.json
-      - name: Upload unused-code report
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: unused-code
-          path: ${{ inputs.working-directory }}/.artifacts/knip.json
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 7
       - name: Verify
         run: npm run verify
+      - name: Upload quality reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: code-quality
+          path: ${{ inputs.working-directory }}/reports/quality/*.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Pack verified package
         if: inputs.package-artifact != ''
         run: |
@@ -116,6 +114,14 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
+      - name: Upload application performance report
+        if: inputs.spa-artifact != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: application-performance
+          path: ${{ inputs.working-directory }}/reports/performance.json
+          if-no-files-found: error
+          retention-days: 14
     needs: security
     timeout-minutes: 30
   security:

@@ -1,0 +1,7 @@
+{
+  "$schema": "./quality/schema.json",
+  "kind": "tooling",
+  "paths": ["eslint", "vite", "lint-staged", "env", "nginx", "browser", "scripts", "quality"],
+  "tsConfig": "tsconfig.json",
+  "browserPaths": ["browser"]
+}

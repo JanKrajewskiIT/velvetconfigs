@@ -10,6 +10,8 @@ import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+import { suppressionPlugin } from './suppression-plugin.mjs';
+
 const SOURCE_EXTENSIONS = 'js,jsx,ts,tsx,mjs,cjs,mts,cts';
 const UNUSED_IGNORE_PATTERN = '^_';
 
@@ -125,7 +127,19 @@ const buildSharedRules = ({ allowConsoleWarnError }) => ({
   '@typescript-eslint/no-unused-vars': 'off',
   '@typescript-eslint/no-unnecessary-type-arguments': 'off',
   '@typescript-eslint/no-unnecessary-condition': 'warn',
-  '@typescript-eslint/no-misused-promises': 'warn',
+  '@typescript-eslint/no-misused-promises': 'error',
+  '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: false }],
+  'no-restricted-imports': [
+    'error',
+    {
+      patterns: [
+        {
+          group: ['@jankrajewskiit/*/src/**', '@jankrajewskiit/*/dist/**', '@jankrajewskiit/*/node_modules/**'],
+          message: 'Use the public exports of the Velvet package.',
+        },
+      ],
+    },
+  ],
   '@typescript-eslint/restrict-template-expressions': 'off',
   '@typescript-eslint/no-confusing-void-expression': 'off',
   '@typescript-eslint/no-unsafe-type-assertion': 'off',
@@ -144,6 +158,12 @@ const createConfig = ({ options, presets, plugins, rules, typedGlobals }) =>
       ...presets(scopeTypeAwareRules(options.typedFiles)),
       eslintConfigPrettier,
       globalIgnores([...DEFAULT_IGNORES, ...options.ignorePaths]),
+      {
+        name: 'configs/lint-suppressions',
+        plugins: { 'velvet-quality': suppressionPlugin },
+        linterOptions: { reportUnusedDisableDirectives: 'error', reportUnusedInlineConfigs: 'error' },
+        rules: { 'velvet-quality/require-disable-reason': 'error' },
+      },
       {
         name: 'configs/config-files',
         files: CONFIG_FILES,

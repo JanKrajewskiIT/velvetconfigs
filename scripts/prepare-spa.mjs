@@ -23,7 +23,17 @@ rmSync(output, { recursive: true, force: true });
 mkdirSync(output);
 mkdirSync(path.join(output, 'scripts'));
 mkdirSync(path.join(output, 'security'));
-cpSync(path.join(root, 'dist'), path.join(output, 'dist'), { recursive: true });
+const dist = path.join(root, 'dist');
+cpSync(dist, path.join(output, 'dist'), {
+  recursive: true,
+  filter: (source) => source !== path.join(dist, '.vite'),
+});
+const performanceReport = path.join(root, 'reports/performance.json');
+try {
+  cpSync(performanceReport, path.join(output, 'performance.json'));
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
 for (const [source, destination] of [
   ['nginx/locations.conf', 'locations.conf'],
   ['docker/Dockerfile.spa', 'Dockerfile'],

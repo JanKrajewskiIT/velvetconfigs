@@ -303,6 +303,16 @@ Library JavaScript targets the shared TypeScript baseline (ES2024), and default 
 
 Application verification can enable `dockerfile-check` to run `docker build --check .` on the full local/Aspire recipe without building it. Recron narrowly skips the secret-name heuristic in that recipe because `VITE_AUTH_*` is public OIDC metadata, while actual registry authentication stays in a BuildKit secret. All other build checks remain enabled.
 
+## Application recovery and performance
+
+`@jankrajewskiit/configs/browser` provides `installPreloadRecovery`, `createBrowserDiagnostics` and `observeWebVitals`. Recovery catches Vite's dynamic-import load failures and delegates a reload action to the application. It checks `canReload` and a per-tab 30-second loop guard; it never reloads automatically. Keep the update prompt outside route error boundaries. Reporters receive only structured error categories or LCP/INP/CLS values, ratings, app/version and timestamp. No URL, stack, request body, token or DOM text is included. The default transport is a local `velvet:diagnostic` event, with an in-memory history capped at 30 reports. Applications may supply a reviewed `onReport` integration.
+
+Web Vitals use the optional `web-vitals` peer (version 6). Install it in an application that enables measurement. A document has one shared set of standard collectors; disposing observation removes the application's subscription. The collectors live until document unload. The Vite app factory embeds `__VELVET_APP_VERSION__` from the consumer manifest and emits the Vite manifest by default.
+
+`configs-bundle-report` reads the already-built `dist/.vite/manifest.json` and writes `reports/performance.json`. It reports initial JS/CSS, complete lazy-entry dependencies, additional lazy bytes excluding initial files, and raw/gzip/Brotli sizes. It neither builds nor starts an application. Optional `performance-budget.json` accepts `initial.bytes`, `initial.gzip` and `initial.brotli` limits in bytes. Establish limits from the first actual report; no arbitrary baseline is shipped. SPA preparation includes the report in the runtime-context artifact, and the verification workflow uploads a separate report.
+
+`configs-package-styles` copies a library's owned `src/styles` tree into `dist/styles` after Vite finishes. It preserves CSS imports and assets and rejects symbolic-link roots or files. Libraries declare their partial stylesheet exports and JavaScript entry without CSS; the helper does not infer component dependencies.
+
 ## Security pipeline
 
 Source verification includes Gitleaks, Semgrep, actionlint, zizmor and Trivy configuration scanning. npm audit blocks high/critical advisories under the shared expiring-exception policy. Verification produces a CycloneDX dependency SBOM. Weekly/manual security workflows re-check dependency databases and source history without building the application.
@@ -310,3 +320,7 @@ Source verification includes Gitleaks, Semgrep, actionlint, zizmor and Trivy con
 Knip is available through `npm run deps:check` (JSON report) and `npm run deps:strict` (blocking unused-code check). CI records the report while the initial findings are reviewed; security scans remain blocking. Public library entry exports are preserved.
 
 Configure `CONFIGS_READ_TOKEN` for private Configs source access alongside the existing npm read token. See [shared security controls](https://github.com/JanKrajewskiIT/velvetconfigs/blob/v3.5.0/security/README.md) for required GitHub settings, reports, image signing, staging variables, WAF activation and manual acceptance checks.
+
+## Code quality
+
+See [shared quality controls](quality/README.md) for architecture, duplication, strict unused-code checks, Promise handling and CodeQL rollout.

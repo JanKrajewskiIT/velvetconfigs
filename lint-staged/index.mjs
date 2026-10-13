@@ -95,4 +95,8 @@ export const createChunkedLintStagedConfig = (options = {}) =>
 
 export const lintStagedConfig = createLintStagedConfig();
 
+/**
+ * Retains the published default export alongside the named configuration.
+ * @alias lintStagedConfig
+ */
 export default lintStagedConfig;
