@@ -199,7 +199,7 @@ Consumer packages call the shared verify and publish pipeline instead of copying
 # .github/workflows/ci.yml
 jobs:
   verify:
-    uses: jankrajewskiit/velvetconfigs/.github/workflows/verify-package.yml@v3.5.0
+    uses: JanKrajewskiIT/velvetconfigs/.github/workflows/verify-package.yml@9d7851722b143c4d8aaf7ca0f2058f5ae149fe44 # v3.5.3
     with:
       package-artifact: velvet-package
     secrets:
@@ -210,12 +210,12 @@ jobs:
 # .github/workflows/publish.yml
 jobs:
   verify:
-    uses: jankrajewskiit/velvetconfigs/.github/workflows/verify-package.yml@v3.5.0
+    uses: JanKrajewskiIT/velvetconfigs/.github/workflows/verify-package.yml@9d7851722b143c4d8aaf7ca0f2058f5ae149fe44 # v3.5.3
     secrets:
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
   publish:
     needs: verify
-    uses: jankrajewskiit/velvetconfigs/.github/workflows/publish-package.yml@v3.5.0
+    uses: JanKrajewskiIT/velvetconfigs/.github/workflows/publish-package.yml@9d7851722b143c4d8aaf7ca0f2058f5ae149fe44 # v3.5.3
     permissions:
       contents: read
       packages: write
@@ -285,11 +285,11 @@ The full application Dockerfiles remain available for local/Aspire builds with B
 
 ### Release migration
 
-1. Refresh Configs' lockfile and publish the existing 3.5.0 version and v3.5.0 workflow tag first.
+1. Use the published Configs 3.5.3 workflow commit and refresh consumer lockfiles against the matching package release.
 2. Refresh and publish I18n/Auth/Reactive, then Ui, then Data using their existing manifest versions.
 3. Refresh Demo and Recron installations and deploy after their verification succeeds.
 
-Consumers use the versioned v3.5.0 reusable workflows; protect release tags against moving. Library verification uploads velvet-package. Publishing checks archive identity against the checkout and release tag, then publishes that archive with lifecycle scripts disabled. Manual npm publish still runs prepublishOnly.
+Consumers pin reusable workflows to commit 9d7851722b143c4d8aaf7ca0f2058f5ae149fe44 from v3.5.3; protect release tags against moving. Pin the commit obtained with git rev-parse 'v3.5.3^{}', not the annotated tag object's SHA. Relative nested workflows then resolve from that same commit. Library verification uploads velvet-package. Publishing checks archive identity against the checkout and release tag, then publishes that archive with lifecycle scripts disabled. Manual npm publish still runs prepublishOnly.
 
 Package and SPA image transfers use named ZIP artifacts with compression disabled because their contents are already compressed. Keep archive enabled: upload-artifact v7 ignores the configured artifact name when archive is false and uses the uploaded filename instead. The download action extracts the outer ZIP; the verified .tgz or spa-image.tar.gz inside remains unchanged.
 
