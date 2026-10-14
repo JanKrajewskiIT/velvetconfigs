@@ -5,12 +5,12 @@ All eight frontend projects run `quality:check` from their existing `verify` com
 
 ## Local and CI gates
 
-| Control              | Behavior                                                                                               | Output                              |
-| -------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------- |
-| `architecture:check` | Blocks import cycles, unresolved imports, undeclared packages and forbidden boundaries                 | `reports/quality/architecture.json` |
-| `duplicates:report`  | Reports clones of at least 100 tokens and 10 lines; an explicitly configured budget blocks regressions | `reports/quality/duplicates.json`   |
-| `deps:strict`        | Blocks Knip findings; public library entry exports are retained                                        | `reports/quality/unused-code.json`  |
-| ESLint               | Type-aware Promise handling, public package imports and justified, current suppressions                | Normal lint output                  |
+| Control              | Behavior                                                                                               | Output                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `architecture:check` | Blocks import cycles, unresolved imports, undeclared packages and forbidden boundaries                 | `reports/quality/architecture.json`                       |
+| `duplicates:report`  | Reports clones of at least 100 tokens and 10 lines; an explicitly configured budget blocks regressions | `reports/quality/duplicates.json`; diagnostics on failure |
+| `deps:strict`        | Blocks Knip findings; public library entry exports are retained                                        | `reports/quality/unused-code.json`                        |
+| ESLint               | Type-aware Promise handling, public package imports and justified, current suppressions                | Normal lint output                                        |
 
 Browser sources cannot import Node built-ins. Libraries cannot import applications or depend on development-only packages
 at runtime. Type-only dependencies on development packages and declared peer dependencies remain supported.
@@ -26,8 +26,10 @@ under `node_modules` directories such as `dist`.
 Scanners require installed consumer dependencies and run
 through their local JavaScript executables with no shell interpolation. Missing tools, crashes and invalid/empty reports
 fail the command. Architecture reports and duplication summaries contain paths and positions, never source fragments.
-Transient raw duplication output is removed after scanning. The reusable verification workflow uploads only named JSON
-reports, with seven-day retention; it does not upload temporary scanner configuration or raw source excerpts.
+On scanner failure, `reports/quality/duplicates-diagnostics.json` records runtime and platform details, bounded scanner
+output, and a summary of the raw report's structure without preserving source fragments. Transient raw duplication
+output is removed after scanning. The reusable verification workflow uploads named JSON reports with seven-day
+retention; it does not upload temporary scanner configuration or raw source excerpts.
 Each command removes its previous report before scanning, so a failed invocation cannot leave an old passing report
 under that command's output name.
 

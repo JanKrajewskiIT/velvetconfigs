@@ -9,7 +9,7 @@ const consumerRequire = createRequire(path.resolve('package.json'));
 export const qualityOutput = path.resolve('reports/quality');
 export const loadQualityPolicy = () => readQualityPolicy(JSON.parse(readFileSync('code-quality.json', 'utf8')));
 export const prepareQualityOutput = (reportName) => {
-  if (!['architecture.json', 'duplicates.json', 'unused-code.json'].includes(reportName))
+  if (!['architecture.json', 'duplicates.json', 'duplicates-diagnostics.json', 'unused-code.json'].includes(reportName))
     throw new Error('Unknown quality report.');
   mkdirSync(qualityOutput, { recursive: true });
   rmSync(path.join(qualityOutput, reportName), { force: true });

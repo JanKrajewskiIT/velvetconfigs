@@ -13,6 +13,7 @@ import {
 
 const policy = loadQualityPolicy();
 prepareQualityOutput('duplicates.json');
+prepareQualityOutput('duplicates-diagnostics.json');
 const temporary = mkdtempSync(path.join(qualityOutput, '.duplicates-'));
 try {
   const config = path.join(temporary, 'config.json');
@@ -27,18 +28,81 @@ try {
   };
   writeFileSync(config, `${JSON.stringify(configuration, null, 2)}\n`);
   const result = runQualityTool('jscpd', 'jscpd', ['--config', config, ...roots.map((root) => path.resolve(root))]);
-  if (result.status !== 0) throw new Error('Duplicate scanner failed. No passing report was produced.');
-  const raw = JSON.parse(readFileSync(path.join(temporary, 'jscpd-report.json'), 'utf8'));
-  const total = raw.statistics?.total;
+  const outputExcerpt = (value) => {
+    if (typeof value !== 'string') return undefined;
+    const output = value.trim();
+    if (!output) return undefined;
+    return output.length <= 4_000 ? output : `${output.slice(0, 4_000)}…[truncated]`;
+  };
+  const stdout = outputExcerpt(result.stdout);
+  const stderr = outputExcerpt(result.stderr);
+  const scanner = {
+    tool: 'jscpd',
+    node: process.version,
+    platform: `${process.platform}-${process.arch}`,
+    exitCode: result.status,
+    paths: roots.length ? roots : policy.paths,
+    ...(stdout ? { stdout } : {}),
+    ...(stderr ? { stderr } : {}),
+  };
+  const writeDiagnostics = (details) =>
+    writeFileSync(
+      path.join(qualityOutput, 'duplicates-diagnostics.json'),
+      `${JSON.stringify({ scanner, ...details }, null, 2)}\n`,
+    );
+  if (result.status !== 0) {
+    writeDiagnostics({ reason: 'scanner-failed' });
+    throw new Error('Duplicate scanner failed. Inspect reports/quality/duplicates-diagnostics.json.');
+  }
+  let raw;
+  try {
+    raw = JSON.parse(readFileSync(path.join(temporary, 'jscpd-report.json'), 'utf8'));
+  } catch (error) {
+    writeDiagnostics({
+      reason: 'report-unreadable',
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error(
+      'Duplicate scanner report could not be read. Inspect reports/quality/duplicates-diagnostics.json.',
+      { cause: error },
+    );
+  }
+  const rawReport = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const statistics = rawReport.statistics;
+  const total = statistics?.total;
   if (
     !total ||
     !Number.isFinite(total.lines) ||
     total.lines <= 0 ||
     !Number.isFinite(total.percentage) ||
     !Number.isFinite(total.duplicatedLines) ||
-    !Array.isArray(raw.duplicates)
-  )
-    throw new Error('Duplicate scanner did not return a complete, nonempty report.');
+    !Array.isArray(rawReport.duplicates)
+  ) {
+    const describe = (value) => ({
+      type: value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value,
+      ...(typeof value === 'number' && Number.isFinite(value) ? { value } : {}),
+    });
+    const statisticsRecord = statistics && typeof statistics === 'object' ? statistics : {};
+    writeDiagnostics({
+      reason: 'report-incomplete',
+      report: {
+        reportType: raw === null ? 'null' : Array.isArray(raw) ? 'array' : typeof raw,
+        keys: Object.keys(rawReport).slice(0, 50),
+        statisticsType: statistics === null ? 'null' : Array.isArray(statistics) ? 'array' : typeof statistics,
+        statisticsKeys: Object.keys(statisticsRecord).slice(0, 50),
+        totalType: total === null ? 'null' : Array.isArray(total) ? 'array' : typeof total,
+        totalKeys: total && typeof total === 'object' ? Object.keys(total) : [],
+        lines: describe(total?.lines),
+        percentage: describe(total?.percentage),
+        duplicatedLines: describe(total?.duplicatedLines),
+        duplicatesType: Array.isArray(rawReport.duplicates) ? 'array' : typeof rawReport.duplicates,
+        duplicateCount: Array.isArray(rawReport.duplicates) ? rawReport.duplicates.length : undefined,
+      },
+    });
+    throw new Error(
+      'Duplicate scanner returned an incomplete report. Inspect reports/quality/duplicates-diagnostics.json.',
+    );
+  }
   const position = (file) => {
     if (!file || !Number.isInteger(file.start) || !Number.isInteger(file.end))
       throw new TypeError('Invalid duplicate position.');
@@ -49,7 +113,7 @@ try {
     duplicatedLines: total.duplicatedLines,
     percentage: total.percentage,
     maxPercentage: roots.length ? undefined : policy.duplication.maxPercentage,
-    duplicates: raw.duplicates.map((clone) => ({
+    duplicates: rawReport.duplicates.map((clone) => ({
       format: clone.format,
       lines: clone.lines,
       tokens: clone.tokens,
