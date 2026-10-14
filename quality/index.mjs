@@ -156,7 +156,6 @@ export const createDuplicationConfig = (input) => {
       '**/*.d.mts',
       '**/api/schema/**',
       '**/api-contracts/**',
-      '**/velvet/**',
       '**/.agents/**',
       '**/.deployment/**',
     ],

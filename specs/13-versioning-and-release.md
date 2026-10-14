@@ -41,7 +41,7 @@ Removal happens only in a MAJOR release that lists the deprecation cycle in the 
 
 ## Step 4 — Changelog discipline
 
-- Every released version has a corresponding entry in the release notes (GitHub Releases or a `CHANGELOG.md`, depending on the chosen workflow).
+- Every released version has a corresponding entry in the shared consolidated changelog.
 - Entries enumerate breaking changes, new exports, new options, and notable internal changes in that order.
 - Migration notes appear inline with breaking entries; consumers must not need to read the diff to upgrade.
 
