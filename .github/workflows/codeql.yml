@@ -12,10 +12,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: codeql-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   analysis:
     uses: ./.github/workflows/codeql-analysis.yml

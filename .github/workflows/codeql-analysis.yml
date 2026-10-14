@@ -48,14 +48,18 @@ jobs:
         with:
           category: velvet/javascript-security-and-quality
           output: codeql-results
+          upload: never
           upload-database: false
-          wait-for-processing: true
+          wait-for-processing: false
       - name: Block high security findings and quality errors
         run: |
           node --input-type=module <<'NODE'
-          import { readdirSync, readFileSync } from 'node:fs';
+          import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
           const files = readdirSync('codeql-results').filter((name) => name.endsWith('.sarif'));
           if (!files.length) throw new Error('Missing CodeQL report.');
+          const output = 'reports/codeql';
+          const omittedFields = new Set(['snippet', 'contents', 'invocations', 'insertedContent', 'webRequest', 'webResponse']);
+          mkdirSync(output, { recursive: true });
           let blocked = 0;
           for (const file of files) {
             const report = JSON.parse(readFileSync(`codeql-results/${file}`, 'utf8'));
@@ -76,6 +80,18 @@ jobs:
                 if (Number(security) >= 7 || (security === undefined && level === 'error')) blocked += 1;
               }
             }
+            writeFileSync(
+              `${output}/${file}`,
+              `${JSON.stringify(report, (key, value) => omittedFields.has(key) ? undefined : value, 2)}\n`,
+            );
           }
-          if (blocked) throw new Error(`${blocked} blocking CodeQL findings. Inspect GitHub code scanning.`);
+          if (blocked) throw new Error(`${blocked} blocking CodeQL findings. Inspect the codeql-sarif artifact.`);
           NODE
+      - name: Upload CodeQL SARIF reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: codeql-sarif
+          path: reports/codeql/*.sarif
+          if-no-files-found: error
+          retention-days: 7

@@ -79,16 +79,27 @@ its reason after `--`; blanket disables are rejected. Exceptions remain adjacent
 
 The reusable `codeql-analysis.yml` scans JavaScript/TypeScript with `security-and-quality`: it includes the security
 extended suite plus reliability and maintainability queries. It does not install application packages, run npm lifecycle
-scripts, build an application or upload the CodeQL database. The pinned CodeQL action uploads results to GitHub code
-scanning. A separate report gate blocks security severity of 7 or higher and quality results at `error` level, including
-existing findings. Scanner/report failures also block. Lower-severity findings remain visible for review.
+scripts, build an application or upload the CodeQL database. Analysis uses `upload: never` and saves SARIF reports
+as the `codeql-sarif` Actions artifact for seven days. Reports omit embedded source snippets, artifact contents,
+invocation metadata, fix source text and web request/response data. A separate report gate blocks security severity
+of 7 or higher and quality results at `error` level, including existing findings. Scanner/report failures also block.
+Reports remain downloadable when valid analysis finds blocking issues; lower-severity findings remain in the artifact.
 
 Each repository has a wrapper for PRs, main, manual execution and Tuesday 06:41 UTC. CodeQL runs for every configured
-trigger regardless of repository visibility, without requiring an opt-in variable. Private repositories still require
-eligibility (an organization on Team/Enterprise with GitHub Code Security) and Code Security enabled to upload results.
-If code scanning is unavailable or disabled, the run fails during upload instead of skipping the analysis.
+trigger regardless of repository visibility, without requiring an opt-in variable. Reports are not sent to GitHub code
+scanning, so a disabled dashboard does not reject the results upload. New runs do not cancel previous CodeQL runs.
 The existing mandatory Semgrep, secrets, workflow, infrastructure and dependency gates remain in force.
-For advanced CodeQL setup, disable conflicting GitHub default setup before enabling this workflow.
+
+Configs owns `.github/workflows/codeql-analysis.yml`. Consumers call a generated local copy of that reusable workflow,
+so they receive the reviewed SARIF behavior with their own commit rather than waiting for a new shared workflow release.
+Update consumer copies from the Configs checkout with:
+
+```powershell
+node .github/scripts/sync-codeql.mjs --write ../VelvetAuth ../VelvetReactive ../VelvetUi ../VelvetData ../VelvetI18n ../VelvetDemo ../Recron
+```
+
+Omit `--write` to check synchronization without changing files. Do not edit generated consumer workflows directly.
+All external actions remain pinned to full commit SHAs.
 
 The GitHub **Code Quality** product is a separate licensed service, not activated by a checked-in workflow or by
 `security-and-quality`. This implementation provides deterministic quality scanning through CodeQL, ESLint, Knip and
@@ -105,8 +116,8 @@ These changes extend the already prepared, unpublished Configs 3.6.0 release. Co
 Publish Configs first, refresh consumer lockfiles/dependencies and publish the coordinated libraries before apps.
 Auth's bootstrap correction is prepared as 3.5.5; Ui, Demo and Recron request that minimum. I18n's runtime is unchanged,
 so its package version is retained while its development tooling requires Configs 3.6.
-CodeQL wrappers reference the immutable Configs commit for `v3.6.0`, with the version retained in a comment.
-Refresh existing Configs verification workflow pins to that same commit so quality artifacts are uploaded.
+CodeQL wrappers call their generated local `codeql-analysis.yml`; commit both workflow files together in each consumer.
+Refresh existing Configs verification workflow pins to the reviewed release commit so quality artifacts are uploaded.
 No commit, tag, package installation, lockfile update, scan, lint, type check, build or test was performed for this change.
 
 After publication, in each frontend project (Configs, Reactive, Ui, Data, Auth, I18n, Demo and `Recron/recron-web`):
@@ -120,7 +131,7 @@ npm run format:check
 
 Those checks remain unrun. The new scanners are not installed in this workspace; install/lockfile refresh comes first.
 `npm run verify` is the full CI-equivalent command and also builds these projects, so it was not run. Run the CodeQL
-workflow on GitHub after enabling the feature and replacing its workflow pin. No claim is made that the new gates or
+workflow on GitHub after committing the local wrapper and analysis workflow. No claim is made that the new gates or
 their initial findings have already passed.
 
 References: [CodeQL query suites](https://codeql.github.com/codeql-query-help/javascript/),

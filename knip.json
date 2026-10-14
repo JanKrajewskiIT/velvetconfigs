@@ -8,12 +8,14 @@
     "nginx/index.mjs!",
     "browser/index.mjs!",
     "scripts/*.mjs!",
+    ".github/scripts/sync-codeql.mjs",
     "quality/index.mjs!"
   ],
   "project": [
     "src/**/*.{ts,tsx}",
     "*.{ts,mjs}",
     "scripts/*.mjs",
+    ".github/scripts/*.mjs",
     "quality/**/*.mjs",
     "eslint/**/*.mjs",
     "vite/**/*.mjs",
