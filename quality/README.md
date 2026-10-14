@@ -83,10 +83,10 @@ scripts, build an application or upload the CodeQL database. The pinned CodeQL a
 scanning. A separate report gate blocks security severity of 7 or higher and quality results at `error` level, including
 existing findings. Scanner/report failures also block. Lower-severity findings remain visible for review.
 
-Each repository has a wrapper for PRs, main, manual execution and Tuesday 06:41 UTC. Public repositories run directly.
-For private repositories, first confirm eligibility (an organization on Team/Enterprise with GitHub Code Security)
-and enable Code Security, then set the repository variable
-`CODEQL_ENABLED=true`. Without that setting the CodeQL job is visibly skipped, not presented as a passed scan.
+Each repository has a wrapper for PRs, main, manual execution and Tuesday 06:41 UTC. CodeQL runs for every configured
+trigger regardless of repository visibility, without requiring an opt-in variable. Private repositories still require
+eligibility (an organization on Team/Enterprise with GitHub Code Security) and Code Security enabled to upload results.
+If code scanning is unavailable or disabled, the run fails during upload instead of skipping the analysis.
 The existing mandatory Semgrep, secrets, workflow, infrastructure and dependency gates remain in force.
 For advanced CodeQL setup, disable conflicting GitHub default setup before enabling this workflow.
 
@@ -105,8 +105,8 @@ These changes extend the already prepared, unpublished Configs 3.6.0 release. Co
 Publish Configs first, refresh consumer lockfiles/dependencies and publish the coordinated libraries before apps.
 Auth's bootstrap correction is prepared as 3.5.5; Ui, Demo and Recron request that minimum. I18n's runtime is unchanged,
 so its package version is retained while its development tooling requires Configs 3.6.
-New CodeQL wrappers reference the planned `v3.6.0` workflow release: replace that ref with the actual immutable Configs
-commit before activation. Refresh existing Configs workflow pins to that same commit so quality artifacts are uploaded.
+CodeQL wrappers reference the immutable Configs commit for `v3.6.0`, with the version retained in a comment.
+Refresh existing Configs verification workflow pins to that same commit so quality artifacts are uploaded.
 No commit, tag, package installation, lockfile update, scan, lint, type check, build or test was performed for this change.
 
 After publication, in each frontend project (Configs, Reactive, Ui, Data, Auth, I18n, Demo and `Recron/recron-web`):
