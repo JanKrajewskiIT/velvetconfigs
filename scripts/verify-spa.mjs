@@ -2,10 +2,21 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { get as getHttpResponse } from 'node:http';
 import { setTimeout } from 'node:timers/promises';
 
 const image = process.argv[2] ?? 'velvet-spa:verified';
 const docker = (...arguments_) => execFileSync('docker', arguments_, { encoding: 'utf8' }).trim();
+const getRawResponse = (url, headers) =>
+  new Promise((resolve, reject) => {
+    const request = getHttpResponse(url, { headers }, (response) => {
+      response.resume();
+      response.once('end', () => resolve(response));
+      response.once('error', reject);
+    });
+    request.once('error', reject);
+  });
+
 docker('run', '--rm', '--entrypoint', 'nginx', image, '-t');
 const container = docker('run', '--detach', '--publish', '127.0.0.1::3000', image);
 let failure;
@@ -40,11 +51,11 @@ try {
   const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"?]+\.(?:js|css))"/gu)].map((match) => match[1]);
   assert.ok(assets.length > 0, 'The entry document has no root-relative JS/CSS assets.');
   for (const asset of assets) {
-    const response = await fetch(`${base}${asset}`, { headers: { 'Accept-Encoding': 'gzip' } });
-    assert.equal(response.status, 200, asset);
-    assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable', asset);
-    assert.equal(response.headers.get('content-encoding'), 'gzip', asset);
-    assert.ok(response.headers.get('content-security-policy'), `Asset ${asset} lost inherited headers.`);
+    const response = await getRawResponse(`${base}${asset}`, { 'Accept-Encoding': 'gzip' });
+    assert.equal(response.statusCode, 200, asset);
+    assert.equal(response.headers['cache-control'], 'public, max-age=31536000, immutable', asset);
+    assert.equal(response.headers['content-encoding'], 'gzip', asset);
+    assert.ok(response.headers['content-security-policy'], `Asset ${asset} lost inherited headers.`);
   }
   const { publicAsset } = JSON.parse(readFileSync(new URL('./metadata.json', import.meta.url), 'utf8'));
   if (publicAsset) {
