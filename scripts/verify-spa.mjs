@@ -6,7 +6,7 @@ import { setTimeout } from 'node:timers/promises';
 
 const image = process.argv[2] ?? 'velvet-spa:verified';
 const docker = (...arguments_) => execFileSync('docker', arguments_, { encoding: 'utf8' }).trim();
-docker('run', '--rm', '--entrypoint', 'nginx', image, '-t');
+docker('run', '--rm', '--entrypoint', 'nginx', image, '-g', 'pid /tmp/nginx.pid;', '-t');
 const container = docker('run', '--detach', '--publish', '127.0.0.1::3000', image);
 let failure;
 try {
