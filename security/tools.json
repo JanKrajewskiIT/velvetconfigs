@@ -13,9 +13,9 @@
       "archive": true
     },
     "trivy": {
-      "version": "0.75.0",
-      "url": "https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_Linux-64bit.tar.gz",
-      "sha256": "c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f",
+      "version": "0.76.0",
+      "url": "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz",
+      "sha256": "e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7",
       "archive": true
     },
     "cosign": {
@@ -26,14 +26,14 @@
     }
   },
   "images": {
-    "trivy": "docker.io/aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa",
-    "semgrep": "docker.io/semgrep/semgrep:1.180.0@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3",
-    "zizmor": "ghcr.io/zizmorcore/zizmor:latest@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101",
-    "zap": "ghcr.io/zaproxy/zaproxy:stable@sha256:7aaa659b0d43078febd82e29bad112285c370727e86ab8340444220e17d9f0d2",
+    "trivy": "docker.io/aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222",
+    "semgrep": "docker.io/semgrep/semgrep:1.181.0@sha256:81474464c1f07483ba0682a44787fd93c91397419762a04abe2bafaae396304b",
+    "zizmor": "ghcr.io/zizmorcore/zizmor:1.31.1@sha256:42d409dbb851d4c5d35a058cf042b828bea1e3f2884378c526eb0974780e18d9",
+    "zap": "ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6",
     "waf": "docker.io/owasp/modsecurity-crs:nginx@sha256:133267aa811e1a57a23b52ef04b3c30e802bcbe5454588f6d6af1f69f4b2b667"
   },
   "semgrepRules": {
     "repository": "semgrep/semgrep-rules",
-    "commit": "9bbf021d0acffa3095fcffd17b2bc7787eb4796d"
+    "commit": "17e31e11ebac99fb7dfe1cd288f7a32151b6f3f9"
   }
 }
