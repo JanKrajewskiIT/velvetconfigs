@@ -52,6 +52,12 @@ profile by default. The `spa` profile runs the same ZAP baseline without creatin
 a WAF container or making WAF regression requests. Invalid profiles fail before
 containers start. Both profiles clean up their containers and network.
 
+`security/zap.conf` uses ZAP's tab-separated format: rule ID, `FAIL` level and a
+description. All three fields are required by the scanner parser. Docker failures
+report the operation and exit code, signal or spawn error without exposing raw
+scanner output. ZAP exit code 1 indicates a required finding; code 3 indicates a
+scanner or configuration failure. Both fail the gate.
+
 Consumers must update both the immutable workflow reference and the locked configs
 package to a release containing these changes. `prepare-spa.mjs` copies the security
 script from the installed package into the build artifact; changing only the

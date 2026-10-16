@@ -17,9 +17,16 @@ const suffix = `${process.pid}-${Date.now()}`;
 const network = `velvet-security-${suffix}`;
 const app = `velvet-app-${suffix}`;
 const waf = `velvet-waf-${suffix}`;
-const docker = (args) => {
+const describeTermination = ({ error, signal, status }) => {
+  if (error) return `spawn error ${error.code ?? 'UNKNOWN'}`;
+  if (signal) return `signal ${signal}`;
+  return `exit code ${status}`;
+};
+const docker = (args, operation = args[0]) => {
   const result = spawnSync('docker', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
-  if (result.error || result.status !== 0) throw new Error(`Docker security operation failed: ${args[0]}.`);
+  if (result.error || result.status !== 0) {
+    throw new Error(`Docker security operation failed: ${operation} (${describeTermination(result)}).`);
+  }
   return result.stdout.trim();
 };
 const waitForHttp = async (container, port) => {
@@ -38,29 +45,32 @@ const waitForHttp = async (container, port) => {
   throw new Error('Security target did not serve the benign SPA request within the deadline.');
 };
 const verifyWaf = async () => {
-  docker([
-    'run',
-    '-d',
-    '--name',
-    waf,
-    '--network',
-    network,
-    '-p',
-    '127.0.0.1::8080',
-    '-e',
-    'BACKEND=http://spa:3000',
-    '-e',
-    'PORT=8080',
-    '-e',
-    'MODSEC_RULE_ENGINE=On',
-    '-e',
-    'MODSEC_AUDIT_LOG_PARTS=AHZ',
-    '-e',
-    'MODSEC_RESP_BODY_ACCESS=Off',
-    '-e',
-    'NGINX_X_FORWARDED_PROTO=http',
-    tools.images.waf,
-  ]);
+  docker(
+    [
+      'run',
+      '-d',
+      '--name',
+      waf,
+      '--network',
+      network,
+      '-p',
+      '127.0.0.1::8080',
+      '-e',
+      'BACKEND=http://spa:3000',
+      '-e',
+      'PORT=8080',
+      '-e',
+      'MODSEC_RULE_ENGINE=On',
+      '-e',
+      'MODSEC_AUDIT_LOG_PARTS=AHZ',
+      '-e',
+      'MODSEC_RESP_BODY_ACCESS=Off',
+      '-e',
+      'NGINX_X_FORWARDED_PROTO=http',
+      tools.images.waf,
+    ],
+    'WAF startup',
+  );
   const base = await waitForHttp(waf, 8080);
   const attack = new URL(base);
   attack.searchParams.set('id', "1' OR '1'='1");
@@ -71,53 +81,59 @@ const verifyWaf = async () => {
 let failure;
 try {
   docker(['network', 'create', network]);
-  docker([
-    'run',
-    '-d',
-    '--name',
-    app,
-    '--network',
-    network,
-    '--network-alias',
-    'spa',
-    '-p',
-    '127.0.0.1::3000',
-    '--read-only',
-    '--tmpfs',
-    '/tmp:rw,noexec,nosuid,size=64m',
-    '--cap-drop',
-    'ALL',
-    '--security-opt',
-    'no-new-privileges:true',
-    image,
-  ]);
+  docker(
+    [
+      'run',
+      '-d',
+      '--name',
+      app,
+      '--network',
+      network,
+      '--network-alias',
+      'spa',
+      '-p',
+      '127.0.0.1::3000',
+      '--read-only',
+      '--tmpfs',
+      '/tmp:rw,noexec,nosuid,size=64m',
+      '--cap-drop',
+      'ALL',
+      '--security-opt',
+      'no-new-privileges:true',
+      image,
+    ],
+    'SPA startup',
+  );
   await waitForHttp(app, 3000);
   if (profile === 'waf') await verifyWaf();
-  docker([
-    'run',
-    '--rm',
-    '--network',
-    network,
-    '-v',
-    `${reports}:/zap/wrk:rw`,
-    '-v',
-    `${preset}/security/zap.conf:/policy/zap.conf:ro`,
-    tools.images.zap,
-    'zap-baseline.py',
-    '-t',
-    'http://spa:3000',
-    '-c',
-    '/policy/zap.conf',
-    '-m',
-    '1',
-    '-T',
-    '5',
-    '-I',
-    '-r',
-    'zap.html',
-    '-J',
-    'zap.json',
-  ]);
+  docker(
+    [
+      'run',
+      '--rm',
+      '--network',
+      network,
+      '-v',
+      `${reports}:/zap/wrk:rw`,
+      '-v',
+      `${preset}/security/zap.conf:/policy/zap.conf:ro`,
+      tools.images.zap,
+      'zap-baseline.py',
+      '-t',
+      'http://spa:3000',
+      '-c',
+      '/policy/zap.conf',
+      '-m',
+      '1',
+      '-T',
+      '5',
+      '-I',
+      '-r',
+      'zap.html',
+      '-J',
+      'zap.json',
+    ],
+    'ZAP baseline',
+  );
 } catch (error) {
   failure = error;
 } finally {
@@ -126,7 +142,9 @@ try {
     ['network', 'rm', network],
   ]) {
     const result = spawnSync('docker', args, { encoding: 'utf8' });
-    if ((result.error || result.status !== 0) && !failure) failure = new Error('Security container cleanup failed.');
+    if ((result.error || result.status !== 0) && !failure) {
+      failure = new Error(`Security container cleanup failed (${describeTermination(result)}).`);
+    }
   }
 }
 if (failure) throw failure;
