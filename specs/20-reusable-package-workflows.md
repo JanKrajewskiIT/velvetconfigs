@@ -39,6 +39,25 @@ A consumer keeps three thin workflow files:
 
 Calls reference `jankrajewskiit/velvetconfigs/.github/workflows/<file>@main`. A consumer repository requires `.nvmrc`, an `engines.node` that matches it, an `npm run verify` script, and the `.npmrc` described in the README.
 
+## SPA image verification
+
+`verify-spa.yml` accepts the boolean `waf-enabled` input, which defaults to `true`.
+It always verifies Nginx and HTTP behavior, scans the built SPA image, generates
+its SBOM and runs the ZAP baseline. With WAF enabled it also scans the pinned WAF
+image and verifies forwarding and SQL injection blocking in an isolated network.
+Only deployments without a WAF should explicitly pass `waf-enabled: false`.
+
+`scripts/verify-spa-security.mjs <image> <report-directory> [waf|spa]` uses the `waf`
+profile by default. The `spa` profile runs the same ZAP baseline without creating
+a WAF container or making WAF regression requests. Invalid profiles fail before
+containers start. Both profiles clean up their containers and network.
+
+Consumers must update both the immutable workflow reference and the locked configs
+package to a release containing these changes. `prepare-spa.mjs` copies the security
+script from the installed package into the build artifact; changing only the
+workflow reference leaves an older script that cannot select the SPA profile.
+The previously published version 3.7.10 does not support this workflow input.
+
 ## Acceptance criteria
 
 - A consumer `ci.yml` and `publish.yml` contain no copy of the install, audit, version-check, or publish step lists.

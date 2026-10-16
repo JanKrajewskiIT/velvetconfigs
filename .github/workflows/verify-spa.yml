@@ -8,6 +8,10 @@ on:
       image-artifact:
         type: string
         default: velvet-spa-image
+      waf-enabled:
+        description: Scan and verify the WAF used by the deployment.
+        type: boolean
+        default: true
 permissions:
   contents: read
 jobs:
@@ -41,11 +45,14 @@ jobs:
       - name: Scan runtime image and generate SBOM
         run: node spa/scripts/scan-image.mjs velvet-spa:verified reports/image
       - name: Scan WAF runtime image
+        if: ${{ inputs.waf-enabled }}
         run: |
           waf=$(node -p "require('./spa/security/tools.json').images.waf")
           node spa/scripts/scan-image.mjs "$waf" reports/waf
-      - name: ZAP baseline and WAF regression gate
-        run: node spa/scripts/verify-spa-security.mjs velvet-spa:verified reports/dast
+      - name: ZAP baseline and deployment security checks
+        env:
+          SECURITY_PROFILE: ${{ inputs.waf-enabled && 'waf' || 'spa' }}
+        run: node spa/scripts/verify-spa-security.mjs velvet-spa:verified reports/dast "$SECURITY_PROFILE"
       - name: Upload image security reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

@@ -3,8 +3,11 @@ import { chmodSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-const [image, reportDirectory] = process.argv.slice(2);
-if (!image || !reportDirectory) throw new Error('Usage: verify-spa-security.mjs <image> <report-directory>.');
+const profiles = ['waf', 'spa'];
+const [image, reportDirectory, profile = profiles[0], ...extra] = process.argv.slice(2);
+if (!image || !reportDirectory || !profiles.includes(profile) || extra.length) {
+  throw new Error(`Usage: verify-spa-security.mjs <image> <report-directory> [${profiles.join('|')}].`);
+}
 const preset = path.resolve(import.meta.dirname, '..');
 const tools = JSON.parse(readFileSync(path.join(preset, 'security/tools.json'), 'utf8'));
 const reports = path.resolve(reportDirectory);
@@ -19,27 +22,22 @@ const docker = (args) => {
   if (result.error || result.status !== 0) throw new Error(`Docker security operation failed: ${args[0]}.`);
   return result.stdout.trim();
 };
-let failure;
-try {
-  docker(['network', 'create', network]);
-  docker([
-    'run',
-    '-d',
-    '--name',
-    app,
-    '--network',
-    network,
-    '--network-alias',
-    'spa',
-    '--read-only',
-    '--tmpfs',
-    '/tmp:rw,noexec,nosuid,size=64m',
-    '--cap-drop',
-    'ALL',
-    '--security-opt',
-    'no-new-privileges:true',
-    image,
-  ]);
+const waitForHttp = async (container, port) => {
+  const bindings = JSON.parse(docker(['inspect', '--format', '{{json .NetworkSettings.Ports}}', container]));
+  const base = `http://127.0.0.1:${bindings[`${port}/tcp`][0].HostPort}`;
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    try {
+      const response = await fetch(base, { signal: AbortSignal.timeout(2_000), redirect: 'error' });
+      await response.body?.cancel();
+      if (response.status === 200) return base;
+    } catch {
+      /* Connection refusal is expected while the application and WAF start. */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  throw new Error('Security target did not serve the benign SPA request within the deadline.');
+};
+const verifyWaf = async () => {
   docker([
     'run',
     '-d',
@@ -63,26 +61,38 @@ try {
     'NGINX_X_FORWARDED_PROTO=http',
     tools.images.waf,
   ]);
-  const bindings = JSON.parse(docker(['inspect', '--format', '{{json .NetworkSettings.Ports}}', waf]));
-  const base = `http://127.0.0.1:${bindings['8080/tcp'][0].HostPort}`;
-  let ready = false;
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    try {
-      const response = await fetch(base, { signal: AbortSignal.timeout(2_000) });
-      if (response.status === 200) {
-        ready = true;
-        break;
-      }
-    } catch {
-      /* Connection refusal is expected while the two proxies start. */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-  }
-  if (!ready) throw new Error('WAF did not forward the benign SPA request within the deadline.');
+  const base = await waitForHttp(waf, 8080);
   const attack = new URL(base);
   attack.searchParams.set('id', "1' OR '1'='1");
-  const response = await fetch(attack, { signal: AbortSignal.timeout(5_000) });
+  const response = await fetch(attack, { signal: AbortSignal.timeout(5_000), redirect: 'error' });
+  await response.body?.cancel();
   if (response.status !== 403) throw new Error('WAF did not block the SQL injection regression payload.');
+};
+let failure;
+try {
+  docker(['network', 'create', network]);
+  docker([
+    'run',
+    '-d',
+    '--name',
+    app,
+    '--network',
+    network,
+    '--network-alias',
+    'spa',
+    '-p',
+    '127.0.0.1::3000',
+    '--read-only',
+    '--tmpfs',
+    '/tmp:rw,noexec,nosuid,size=64m',
+    '--cap-drop',
+    'ALL',
+    '--security-opt',
+    'no-new-privileges:true',
+    image,
+  ]);
+  await waitForHttp(app, 3000);
+  if (profile === 'waf') await verifyWaf();
   docker([
     'run',
     '--rm',
@@ -112,7 +122,7 @@ try {
   failure = error;
 } finally {
   for (const args of [
-    ['rm', '-f', waf, app],
+    ['rm', '-f', app, ...(profile === 'waf' ? [waf] : [])],
     ['network', 'rm', network],
   ]) {
     const result = spawnSync('docker', args, { encoding: 'utf8' });
@@ -120,4 +130,5 @@ try {
   }
 }
 if (failure) throw failure;
-console.info('ZAP baseline and WAF forwarding/blocking checks passed.');
+console.info('ZAP baseline passed.');
+if (profile === 'waf') console.info('WAF forwarding/blocking checks passed.');
