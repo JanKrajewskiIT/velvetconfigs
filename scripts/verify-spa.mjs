@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { get as getHttpResponse } from 'node:http';
 import { setTimeout } from 'node:timers/promises';
 
 const image = process.argv[2] ?? 'velvet-spa:verified';
+const locations = readFileSync(new URL('./locations.conf', import.meta.url), 'utf8');
+const gzipMinLengthDirective = locations.match(/^\s*gzip_min_length\s+(\d+)\s*;/mu);
+assert.ok(gzipMinLengthDirective, 'The SPA configuration must define gzip_min_length in bytes.');
+const gzipMinLength = Number(gzipMinLengthDirective[1]);
 const docker = (...arguments_) => execFileSync('docker', arguments_, { encoding: 'utf8' }).trim();
 const getRawResponse = (url, headers) =>
   new Promise((resolve, reject) => {
@@ -51,10 +55,12 @@ try {
   const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"?]+\.(?:js|css))"/gu)].map((match) => match[1]);
   assert.ok(assets.length > 0, 'The entry document has no root-relative JS/CSS assets.');
   for (const asset of assets) {
+    const assetSize = statSync(new URL(`./dist${asset}`, import.meta.url)).size;
+    const expectedEncoding = assetSize >= gzipMinLength ? 'gzip' : undefined;
     const response = await getRawResponse(`${base}${asset}`, { 'Accept-Encoding': 'gzip' });
     assert.equal(response.statusCode, 200, asset);
     assert.equal(response.headers['cache-control'], 'public, max-age=31536000, immutable', asset);
-    assert.equal(response.headers['content-encoding'], 'gzip', asset);
+    assert.equal(response.headers['content-encoding'], expectedEncoding, asset);
     assert.ok(response.headers['content-security-policy'], `Asset ${asset} lost inherited headers.`);
   }
   const { publicAsset } = JSON.parse(readFileSync(new URL('./metadata.json', import.meta.url), 'utf8'));
