@@ -60,6 +60,17 @@ a reusable workflow SHA or rerunning verification on an older SPA artifact does
 not update the artifact contents. Do not add missing files after image verification;
 prepare the complete context before building and scanning the image.
 
+The SPA runtime uses the official Nginx Alpine slim image, pinned by digest in
+`docker/Dockerfile.spa`. The generated configuration needs core HTTP, gzip and
+static-file support, but no optional image-filter, XSLT, GeoIP, njs or ACME
+modules. The full Alpine variant adds those modules and their dependencies,
+including libraries flagged as `CVE-2026-77214` (`libexpat`) and
+`CVE-2026-88806` (`libx11`). Use the slim variant rather than accepting these
+findings as exceptions. A base-image change follows the same npm release,
+consumer lockfile update and fresh artifact procedure above. The final image
+still requires the existing Nginx/HTTP verification and Trivy gate; inspecting
+the upstream Dockerfile does not establish a passing scan.
+
 ## Adopting this migration
 
 Updating local Configs files does not update an already published reusable
