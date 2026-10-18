@@ -108,8 +108,6 @@ switch (check) {
         tools.images.sastRuntime,
         '/scanner/opengrep',
         'scan',
-        '--metrics',
-        'off',
         '--disable-version-check',
         '--strict',
         '--error',
