@@ -40,6 +40,7 @@ for (const [source, destination] of [
   ['docker/prepare-runtime.sh', 'prepare-runtime.sh'],
   ['scripts/verify-spa.mjs', 'verify-spa.mjs'],
   ['scripts/security-tools.mjs', 'scripts/security-tools.mjs'],
+  ['scripts/security-tool-directory.mjs', 'scripts/security-tool-directory.mjs'],
   ['scripts/scan-image.mjs', 'scripts/scan-image.mjs'],
   ['scripts/verify-spa-security.mjs', 'scripts/verify-spa-security.mjs'],
   ['security/tools.json', 'security/tools.json'],

@@ -47,6 +47,19 @@ workflow still uploads them as `security-sast`. Gitleaks behavior and historical
 findings are unchanged. Potentially active historical credentials must be revoked
 and reviewed before any separate baseline or history-cleanup decision.
 
+## SPA security tooling
+
+`configs-spa` copies the image verification scripts and their policy files into
+`.deployment/spa`. The scanner installer imports `security-tool-directory.mjs`,
+which must accompany `security-tools.mjs` in the artifact's `scripts/` directory.
+The image workflow uses this artifact directly, without a Configs checkout.
+
+Changes to this file list require a new Configs npm release, a consumer lockfile
+update and a fresh `npm run build:spa` after the application build. Updating only
+a reusable workflow SHA or rerunning verification on an older SPA artifact does
+not update the artifact contents. Do not add missing files after image verification;
+prepare the complete context before building and scanning the image.
+
 ## Adopting this migration
 
 Updating local Configs files does not update an already published reusable
