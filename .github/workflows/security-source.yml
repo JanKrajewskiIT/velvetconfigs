@@ -32,17 +32,25 @@ jobs:
           path: tooling
           persist-credentials: false
           token: ${{ secrets.CONFIGS_READ_TOKEN || github.token }}
+          sparse-checkout-cone-mode: false
           sparse-checkout: |
-            scripts
-            security
+            /scripts/
+            /security/
+            /package.json
+            /package-lock.json
       - name: Select local Configs policy
         if: github.repository == 'JanKrajewskiIT/velvetconfigs'
         run: |
           mkdir tooling
-          cp -R source/scripts source/security tooling/
+          cp -R source/scripts source/security source/package.json source/package-lock.json tooling/
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '26'
+      - name: Install locked SAST parser without lifecycle scripts
+        if: matrix.check == 'sast'
+        run: |
+          npm install --global "$(node -p "require('./tooling/package.json').packageManager")" --ignore-scripts --registry https://registry.npmjs.org
+          npm ci --prefix tooling --ignore-scripts --no-audit --no-fund --registry https://registry.npmjs.org
       - name: Install checksum-pinned scanner
         env:
           CHECK: ${{ matrix.check }}

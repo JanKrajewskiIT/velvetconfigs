@@ -32,6 +32,37 @@ module-relative URL. The pinned Opengrep JavaScript parser does not accept JSON
 import attributes; this equivalent load keeps the preset available to analysis
 without excluding the file or relaxing `--strict`.
 
+### Const type parameters
+
+Opengrep 1.31.0 rejects TypeScript's `const` type-parameter modifier, including
+`<const T extends DictionaryNode>`. The SAST wrapper uses the existing locked
+TypeScript compiler to locate these modifiers in `.ts`, `.tsx`, `.mts` and `.cts`
+files discovered by Git. It does not load consumer modules or execute their code.
+Only modifiers belonging to type-parameter AST nodes are replaced with equal-length
+spaces. Runtime `const` declarations, comments, strings and other type syntax are
+preserved. TypeScript parse errors in a file requiring normalization block the gate.
+
+When normalization is needed, the wrapper copies the checkout, including Git
+metadata, to a temporary directory outside the source tree. It applies the changes
+only to this copy, mounts it read-only into the existing Opengrep container and
+removes it even if scanning fails. Existing exclusions apply to the copy as well.
+The original checkout and published code retain their literal-type inference.
+Line numbers, columns and byte offsets remain aligned with the original files.
+
+The restricted `sast-normalization.json` artifact lists changed paths, modifier
+counts and SHA-256 hashes of the original and scanned files without source excerpts.
+An empty list means the original source directory was scanned directly.
+`sast-files.log` records Git's NUL-separated candidate inventory. Scanner findings
+refer to the normalized copy; use the manifest to relate them to the original source.
+
+The source workflow installs Configs' locked dependencies without lifecycle scripts
+only for SAST, using its declared npm version. Both checkout paths must supply
+`package.json`, `package-lock.json`, `scripts/` and `security/`. The compiler comes
+from Configs rather than an untrusted consumer installation. No additional scanner
+or compiler dependency is introduced.
+
+### Blocking policy
+
 The local [semgrep.yml](semgrep.yml) policy and the upstream
 `semgrep/semgrep-rules` commit remain unchanged. Their Semgrep names identify the
 rule format and upstream repository, not the active engine. JavaScript,
@@ -42,7 +73,7 @@ scan pass.
 Even a zero exit code is rejected if the JSON report is malformed, incomplete,
 contains scan errors or lists no scanned files.
 
-SAST artifacts are now `opengrep.json` and `opengrep.json.stderr.log`; the source
+SAST scanner reports are `opengrep.json` and `opengrep.json.stderr.log`; the source
 workflow still uploads them as `security-sast`. Gitleaks behavior and historical
 findings are unchanged. Potentially active historical credentials must be revoked
 and reviewed before any separate baseline or history-cleanup decision.
@@ -127,10 +158,13 @@ publication does not require another npm release or retagging the package.
    workflow commit. This includes both direct security calls and callers of
    `verify-package.yml`, which invokes source scanning itself.
 4. Run the source security workflow against the consumer. Confirm that SAST uses
-   Opengrep, produces its JSON report and completes without parsing errors. A
-   prepared configuration alone is not successful scan evidence.
+   Opengrep, records any const-type-parameter normalization, produces its JSON
+   report and completes without parsing errors. A prepared configuration alone
+   is not successful scan evidence.
 
-For a manually prepared Linux workspace, install the pinned scanner with
+For a manually prepared Linux workspace, install the declared npm version and run
+`npm ci --prefix tooling --ignore-scripts --no-audit --no-fund --registry https://registry.npmjs.org`
+to supply the locked TypeScript parser. Install the pinned scanner with
 `node tooling/scripts/security-tools.mjs opengrep`, then use
 `node tooling/scripts/scan-source.mjs sast source reports rules`. The `source`,
 `tooling` and `rules` directories must contain the consumer checkout, the matching

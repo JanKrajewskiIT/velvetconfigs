@@ -23,6 +23,7 @@ const run = (command, args, name, cwd = source) => {
       `${check} failed (${termination}); inspect the restricted ${name} and ${name}.stderr.log artifacts.`,
     );
   }
+  return result.stdout ?? '';
 };
 const summarizeWorkflowFindings = () => {
   let findings;
@@ -84,56 +85,57 @@ switch (check) {
     if (!existsSync(opengrep) || !statSync(opengrep).isFile()) {
       throw new Error('Install checksum-pinned Opengrep with node scripts/security-tools.mjs opengrep first.');
     }
-    run(
-      'docker',
-      [
-        'run',
-        '--rm',
-        '--network',
-        'none',
-        '--user',
-        `${process.getuid()}:${process.getgid()}`,
-        '-e',
-        'HOME=/tmp',
-        '-e',
-        'LC_ALL=C.UTF-8',
-        '-v',
-        `${source}:/src:ro`,
-        '-v',
-        `${preset}/security:/policy:ro`,
-        '-v',
-        `${path.resolve(rulesDirectory)}:/rules:ro`,
-        '-v',
-        `${opengrep}:/scanner/opengrep:ro`,
-        '-w',
-        '/src',
-        tools.images.sastRuntime,
-        '/scanner/opengrep',
-        'scan',
-        '--disable-version-check',
-        '--strict',
-        '--error',
-        '--severity',
-        'ERROR',
-        '--config',
-        '/policy/semgrep.yml',
-        '--config',
-        '/rules/javascript',
-        '--config',
-        '/rules/typescript',
-        '--config',
-        '/rules/csharp',
-        '--exclude',
-        '.agents',
-        '--exclude',
-        'node_modules',
-        '--exclude',
-        'dist',
-        '--json',
-        '.',
-      ],
-      'opengrep.json',
-    );
+    const { sastExcludedDirectories, withSastSource } = await import('./sast-source.mjs');
+    const files = run('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], 'sast-files.log')
+      .split('\0')
+      .filter(Boolean);
+    withSastSource(source, files, output, (sastSource) => {
+      run(
+        'docker',
+        [
+          'run',
+          '--rm',
+          '--network',
+          'none',
+          '--user',
+          `${process.getuid()}:${process.getgid()}`,
+          '-e',
+          'HOME=/tmp',
+          '-e',
+          'LC_ALL=C.UTF-8',
+          '-v',
+          `${sastSource}:/src:ro`,
+          '-v',
+          `${preset}/security:/policy:ro`,
+          '-v',
+          `${path.resolve(rulesDirectory)}:/rules:ro`,
+          '-v',
+          `${opengrep}:/scanner/opengrep:ro`,
+          '-w',
+          '/src',
+          tools.images.sastRuntime,
+          '/scanner/opengrep',
+          'scan',
+          '--disable-version-check',
+          '--strict',
+          '--error',
+          '--severity',
+          'ERROR',
+          '--config',
+          '/policy/semgrep.yml',
+          '--config',
+          '/rules/javascript',
+          '--config',
+          '/rules/typescript',
+          '--config',
+          '/rules/csharp',
+          ...sastExcludedDirectories.flatMap((directory) => ['--exclude', directory]),
+          '--json',
+          '.',
+        ],
+        'opengrep.json',
+      );
+    });
     const report = JSON.parse(readFileSync(path.join(output, 'opengrep.json'), 'utf8'));
     if (
       !Array.isArray(report?.results) ||
