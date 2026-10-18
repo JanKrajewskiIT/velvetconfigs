@@ -42,6 +42,12 @@ Only modifiers belonging to type-parameter AST nodes are replaced with equal-len
 spaces. Runtime `const` declarations, comments, strings and other type syntax are
 preserved. TypeScript parse errors in a file requiring normalization block the gate.
 
+Source files are opened once with `O_NOFOLLOW` and `O_NONBLOCK`, then checked and
+read through that same descriptor. Missing files, symbolic links and non-regular
+files are skipped; other I/O errors block the gate. The Linux scanner runner
+must support these flags. Normalized copies are checked and overwritten through
+one read-write descriptor, with explicit write offsets and no symlink following.
+
 When normalization is needed, the wrapper copies the checkout, including Git
 metadata, to a temporary directory outside the source tree. It applies the changes
 only to this copy, mounts it read-only into the existing Opengrep container and
