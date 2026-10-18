@@ -27,6 +27,11 @@ the container.
 The container sets `LC_ALL=C.UTF-8` so Opengrep's embedded Python reads rule
 files using UTF-8 rather than the minimal runtime's ASCII locale.
 
+The Vite preset reads its shipped tsconfig through Node's file API using a
+module-relative URL. The pinned Opengrep JavaScript parser does not accept JSON
+import attributes; this equivalent load keeps the preset available to analysis
+without excluding the file or relaxing `--strict`.
+
 The local [semgrep.yml](semgrep.yml) policy and the upstream
 `semgrep/semgrep-rules` commit remain unchanged. Their Semgrep names identify the
 rule format and upstream repository, not the active engine. JavaScript,

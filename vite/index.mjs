@@ -4,7 +4,7 @@ import path from 'node:path';
 import { mergeConfig, normalizePath } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 
-import appTsconfig from '../tsconfig/app.json' with { type: 'json' };
+const appTsconfig = JSON.parse(readFileSync(new URL('../tsconfig/app.json', import.meta.url), 'utf8'));
 
 const DEFAULT_ALIAS = '~';
 const DEFAULT_SRC_DIR = 'src';
