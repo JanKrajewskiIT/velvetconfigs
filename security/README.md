@@ -88,7 +88,17 @@ mismatch block deployment. Periodic image-scan inventories must use the same pin
 
 Publish these Configs changes together, refresh the consumer lockfile and create
 a fresh SPA artifact. A workflow SHA update alone cannot replace the embedded
-WAF pin. No advisory exceptions are introduced by this update.
+WAF pin and its image exception policy.
+
+The repository owner approved a temporary exception on 2026-10-19 for
+`CVE-2026-88806` in `libx11 1.8.13-r0`, with `HIGH` severity. The exact image
+references, digest, rationale and expiry are recorded in
+[image-exceptions.json](image-exceptions.json). Its two entries cover the same
+pinned image: the tagged reference used by the SPA gate and the repository digest
+returned by Docker for periodic scans. This accepts the identified risk without
+remediating the package; other findings remain blocking. The exception expires
+at 23:59:59 UTC on 2026-10-25 and must be removed when a patched WAF image is
+adopted. The scanner rejects expired exceptions.
 
 ## Adopting this migration
 

@@ -1,3 +1,22 @@
 {
-  "exceptions": []
+  "exceptions": [
+    {
+      "image": "docker.io/owasp/modsecurity-crs:4.30.0-nginx-alpine-202610180210@sha256:873ce68a658d2e3b61484a8a24d215f7d15456e7ce5aec5e7114bf000d743365",
+      "package": "libx11",
+      "version": "1.8.13-r0",
+      "id": "CVE-2026-88806",
+      "severity": "HIGH",
+      "reason": "Temporary risk acceptance pending an upstream WAF rebuild with libx11 1.8.14-r0. The pinned amd64 image SBOM confirms 1.8.13-r0. Exploitation requires connecting to a malicious X11 server; the reviewed HTTP WAF configuration defines no X11 server connection or socket mount. Remove this exception when adopting a patched image; it does not remediate the vulnerable package.",
+      "expires": "2026-10-25"
+    },
+    {
+      "image": "owasp/modsecurity-crs@sha256:873ce68a658d2e3b61484a8a24d215f7d15456e7ce5aec5e7114bf000d743365",
+      "package": "libx11",
+      "version": "1.8.13-r0",
+      "id": "CVE-2026-88806",
+      "severity": "HIGH",
+      "reason": "Temporary risk acceptance pending an upstream WAF rebuild with libx11 1.8.14-r0. Same image as the SPA gate, using the repository digest returned by Docker for periodic scans. Exploitation requires connecting to a malicious X11 server; the reviewed HTTP WAF configuration defines no X11 server connection or socket mount. Remove this exception when adopting a patched image; it does not remediate the vulnerable package.",
+      "expires": "2026-10-25"
+    }
+  ]
 }
