@@ -111,6 +111,12 @@ reference and the external `tooling` checkout in that workflow. Updating the npm
 package alone changes neither reference. A rerun of an older workflow revision
 also retains that revision's scanner configuration.
 
+An internal tooling pin update requires publishing a new workflow commit and
+pinning consumers to that resulting commit. An existing release tag still loads
+its original workflow bytes, even after the internal pin is changed locally.
+When the npm package already contains the required policy, this workflow-only
+publication does not require another npm release or retagging the package.
+
 1. Review and publish a Configs commit containing the Opengrep binary metadata,
    runtime pin, shared tool-directory helper and scanner changes. The Configs
    repository's own source workflow reads its local checkout.
