@@ -53,6 +53,11 @@ Updating local Configs files does not update an already published reusable
 workflow. External consumers also use the immutable Configs checkout inside
 `security-source.yml` to load scanner scripts and `tools.json`.
 
+If a consumer still produces `semgrep.json`, inspect both its reusable workflow
+reference and the external `tooling` checkout in that workflow. Updating the npm
+package alone changes neither reference. A rerun of an older workflow revision
+also retains that revision's scanner configuration.
+
 1. Review and publish a Configs commit containing the Opengrep binary metadata,
    runtime pin, shared tool-directory helper and scanner changes. The Configs
    repository's own source workflow reads its local checkout.
