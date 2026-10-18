@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+
+import { securityToolDirectory } from './security-tool-directory.mjs';
 
 const [check, sourceDirectory, reportDirectory, rulesDirectory] = process.argv.slice(2);
 const source = path.resolve(sourceDirectory);
@@ -76,8 +78,12 @@ switch (check) {
     );
     break;
   }
-  case 'sast':
-    if (!rulesDirectory) throw new Error('Pinned Semgrep rules are required.');
+  case 'sast': {
+    if (!rulesDirectory) throw new Error('Pinned SAST rules are required.');
+    const opengrep = path.join(securityToolDirectory(), 'opengrep');
+    if (!existsSync(opengrep) || !statSync(opengrep).isFile()) {
+      throw new Error('Install checksum-pinned Opengrep with node scripts/security-tools.mjs opengrep first.');
+    }
     run(
       'docker',
       [
@@ -95,10 +101,12 @@ switch (check) {
         `${preset}/security:/policy:ro`,
         '-v',
         `${path.resolve(rulesDirectory)}:/rules:ro`,
+        '-v',
+        `${opengrep}:/scanner/opengrep:ro`,
         '-w',
         '/src',
-        tools.images.semgrep,
-        'semgrep',
+        tools.images.sastRuntime,
+        '/scanner/opengrep',
         'scan',
         '--metrics',
         'off',
@@ -124,9 +132,22 @@ switch (check) {
         '--json',
         '.',
       ],
-      'semgrep.json',
+      'opengrep.json',
     );
+    const report = JSON.parse(readFileSync(path.join(output, 'opengrep.json'), 'utf8'));
+    if (
+      !Array.isArray(report?.results) ||
+      !Array.isArray(report.errors) ||
+      !Array.isArray(report.paths?.scanned) ||
+      report.paths.scanned.length === 0
+    ) {
+      throw new Error('Opengrep produced an incomplete report or scanned no files; inspect the restricted artifacts.');
+    }
+    if (report.errors.length > 0) {
+      throw new Error('Opengrep reported scan errors; inspect the restricted opengrep.json artifact.');
+    }
     break;
+  }
   case 'workflows': {
     const failures = [];
     try {

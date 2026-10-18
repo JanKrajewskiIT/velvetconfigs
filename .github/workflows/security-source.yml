@@ -51,7 +51,7 @@ jobs:
             secrets) node tooling/scripts/security-tools.mjs gitleaks ;;
             workflows) node tooling/scripts/security-tools.mjs actionlint ;;
             iac) node tooling/scripts/security-tools.mjs trivy ;;
-            sast) ;;
+            sast) node tooling/scripts/security-tools.mjs opengrep ;;
             *) exit 1 ;;
           esac
       - name: Read pinned SAST rules commit

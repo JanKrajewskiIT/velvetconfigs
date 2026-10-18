@@ -4,8 +4,10 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import { securityToolDirectory } from './security-tool-directory.mjs';
+
 const tools = JSON.parse(readFileSync(new URL('../security/tools.json', import.meta.url), 'utf8'));
-const directory = path.resolve(process.env.RUNNER_TEMP ?? process.cwd(), 'velvet-security-tools');
+const directory = securityToolDirectory();
 mkdirSync(directory, { recursive: true });
 for (const name of process.argv.slice(2)) {
   const tool = tools.binaries[name];
