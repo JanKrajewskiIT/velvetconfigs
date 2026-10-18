@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: JanKrajewskiIT/velvetconfigs
-          ref: 4264dd86849867a1739ec683c98bab4a81c65317 # v3.16.0
+          ref: 5445dbf6ade3c7418c633bdf3c637610e65242f9 # v3.19.0
           path: tooling
           persist-credentials: false
           token: ${{ secrets.CONFIGS_READ_TOKEN || github.token }}
