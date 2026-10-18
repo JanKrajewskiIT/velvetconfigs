@@ -95,6 +95,8 @@ switch (check) {
         `${process.getuid()}:${process.getgid()}`,
         '-e',
         'HOME=/tmp',
+        '-e',
+        'LC_ALL=C.UTF-8',
         '-v',
         `${source}:/src:ro`,
         '-v',
