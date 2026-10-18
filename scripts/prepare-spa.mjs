@@ -44,6 +44,7 @@ for (const [source, destination] of [
   ['scripts/scan-image.mjs', 'scripts/scan-image.mjs'],
   ['scripts/verify-spa-security.mjs', 'scripts/verify-spa-security.mjs'],
   ['security/tools.json', 'security/tools.json'],
+  ['security/waf.compose.yml', 'security/waf.compose.yml'],
   ['security/image-exceptions.json', 'security/image-exceptions.json'],
   ['security/zap.conf', 'security/zap.conf'],
 ]) {

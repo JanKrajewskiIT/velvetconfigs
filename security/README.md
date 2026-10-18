@@ -71,6 +71,25 @@ consumer lockfile update and fresh artifact procedure above. The final image
 still requires the existing Nginx/HTTP verification and Trivy gate; inspecting
 the upstream Dockerfile does not establish a passing scan.
 
+## WAF image updates
+
+The WAF uses a dated OWASP CRS Nginx Alpine release with an immutable digest.
+The upstream Alpine build upgrades OS packages before assembling the runtime.
+It supports the same backend, port and ModSecurity environment settings used by
+the deployment preset. This changes the OS package inventory; the Trivy scan and
+benign-request/SQL-injection checks must still pass before deployment.
+
+Keep `images.waf` in `tools.json` and the image in `waf.compose.yml` aligned.
+`configs-spa` includes both files in the SPA artifact. Recron takes its deployment
+preset from this artifact and requires its image to match both `images.waf` and
+the successful WAF report's `ArtifactName`. An older workflow tooling checkout
+must not supply a different WAF image after verification. Missing files or a
+mismatch block deployment. Periodic image-scan inventories must use the same pin.
+
+Publish these Configs changes together, refresh the consumer lockfile and create
+a fresh SPA artifact. A workflow SHA update alone cannot replace the embedded
+WAF pin. No advisory exceptions are introduced by this update.
+
 ## Adopting this migration
 
 Updating local Configs files does not update an already published reusable

@@ -36,7 +36,7 @@
     "sastRuntime": "docker.io/library/buildpack-deps:bookworm-scm@sha256:17923645546d74acef88727bce62c23bbaed953fc7097c41a8b777bba3ca98de",
     "zizmor": "ghcr.io/zizmorcore/zizmor:1.31.1@sha256:42d409dbb851d4c5d35a058cf042b828bea1e3f2884378c526eb0974780e18d9",
     "zap": "ghcr.io/zaproxy/zaproxy:stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6",
-    "waf": "docker.io/owasp/modsecurity-crs:nginx@sha256:133267aa811e1a57a23b52ef04b3c30e802bcbe5454588f6d6af1f69f4b2b667"
+    "waf": "docker.io/owasp/modsecurity-crs:4.30.0-nginx-alpine-202610180210@sha256:873ce68a658d2e3b61484a8a24d215f7d15456e7ce5aec5e7114bf000d743365"
   },
   "semgrepRules": {
     "repository": "semgrep/semgrep-rules",

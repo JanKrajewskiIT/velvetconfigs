@@ -1,6 +1,6 @@
 services:
   waf:
-    image: docker.io/owasp/modsecurity-crs:nginx@sha256:133267aa811e1a57a23b52ef04b3c30e802bcbe5454588f6d6af1f69f4b2b667
+    image: docker.io/owasp/modsecurity-crs:4.30.0-nginx-alpine-202610180210@sha256:873ce68a658d2e3b61484a8a24d215f7d15456e7ce5aec5e7114bf000d743365
     restart: unless-stopped
     environment:
       PORT: '8080'
