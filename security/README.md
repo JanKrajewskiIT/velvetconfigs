@@ -116,6 +116,16 @@ and reviewed before any separate baseline or history-cleanup decision.
 
 ## SPA security tooling
 
+Image scans and SBOM generation write `image-scan-status.json` and
+`image-sbom-status.json` in their report directory. These contain only the exit
+code, signal, operating-system error code, duration, output byte counts and fixed
+failure categories inferred from stderr. Raw stdout, stderr, environment data
+and secret matches are not retained in these diagnostics. A failed process or
+invalid JSON still blocks delivery. An empty category list means the cause was
+not recognized; it does not establish that the image passed. Consumers must
+adopt a published tooling commit or a freshly generated SPA artifact to use this
+scanner change.
+
 `configs-spa` copies the image verification scripts and their policy files into
 `.deployment/spa`. The scanner installer imports `security-tool-directory.mjs`,
 which must accompany `security-tools.mjs` in the artifact's `scripts/` directory.

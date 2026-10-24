@@ -22,8 +22,40 @@ for (const exception of policy.exceptions) {
   )
     throw new Error('Invalid or expired image security exception.');
 }
-const result = spawnSync(
-  'trivy',
+function runTrivy(args, phase) {
+  const started = Date.now();
+  const result = spawnSync('trivy', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const categories = [
+    ['disk-full', /no space left on device|disk full/i],
+    ['timeout', /context deadline exceeded|deadline exceeded|timed out|timeout/i],
+    ['memory', /out of memory|cannot allocate memory/i],
+    ['rate-limit', /too many requests|rate limit|\b429\b/i],
+    ['registry-access', /unauthorized|authentication required|denied/i],
+    ['download-or-database', /database error|unable to download|failed to download/i],
+  ]
+    .filter(([, pattern]) => pattern.test(result.stderr ?? ''))
+    .map(([category]) => category);
+  const diagnostic = {
+    phase,
+    exitCode: Number.isInteger(result.status) ? result.status : null,
+    signal: /^SIG[A-Z0-9]+$/.test(result.signal ?? '') ? result.signal : null,
+    errorCode: /^[A-Z][A-Z0-9_]{0,31}$/.test(result.error?.code ?? '') ? result.error.code : null,
+    elapsedMs: Date.now() - started,
+    stdoutBytes: Buffer.byteLength(result.stdout ?? ''),
+    stderrBytes: Buffer.byteLength(result.stderr ?? ''),
+    categories,
+  };
+  const diagnosticName = `${phase}-status.json`;
+  writeFileSync(path.join(output, diagnosticName), `${JSON.stringify(diagnostic, null, 2)}\n`);
+  if (result.error || result.status !== 0) {
+    throw new Error(
+      `Trivy failed: ${JSON.stringify(diagnostic)}; inspect ${diagnosticName}. No passing result is available.`,
+    );
+  }
+  return result.stdout;
+}
+
+const scanOutput = runTrivy(
   [
     'image',
     '--quiet',
@@ -37,10 +69,14 @@ const result = spawnSync(
     '0',
     image,
   ],
-  { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  'image-scan',
 );
-if (result.error || result.status !== 0) throw new Error('Image scanner failed. No passing result is available.');
-const report = JSON.parse(result.stdout);
+let report;
+try {
+  report = JSON.parse(scanOutput);
+} catch {
+  throw new Error('Image scanner returned invalid JSON. No passing result is available.');
+}
 if (report.SchemaVersion !== 2 || !Array.isArray(report.Results)) throw new Error('Unexpected Trivy report schema.');
 const blocked = [];
 for (const entry of report.Results) {
@@ -77,12 +113,13 @@ const safeReport = {
   Results: report.Results,
 };
 writeFileSync(path.join(output, 'trivy.json'), `${JSON.stringify(safeReport, null, 2)}\n`);
-const sbom = spawnSync('trivy', ['image', '--quiet', '--format', 'cyclonedx', '--scanners', 'vuln', image], {
-  encoding: 'utf8',
-  maxBuffer: 64 * 1024 * 1024,
-});
-if (sbom.error || sbom.status !== 0) throw new Error('Image SBOM generation failed.');
-const document = JSON.parse(sbom.stdout);
+const sbomOutput = runTrivy(['image', '--quiet', '--format', 'cyclonedx', '--scanners', 'vuln', image], 'image-sbom');
+let document;
+try {
+  document = JSON.parse(sbomOutput);
+} catch {
+  throw new Error('Image SBOM generator returned invalid JSON. No passing result is available.');
+}
 if (document.bomFormat !== 'CycloneDX') throw new Error('Unexpected SBOM schema.');
 writeFileSync(path.join(output, 'sbom.cdx.json'), `${JSON.stringify(document, null, 2)}\n`);
 if (blocked.length) throw new Error(`Image blocked: ${[...new Set(blocked)].join(', ')}.`);
