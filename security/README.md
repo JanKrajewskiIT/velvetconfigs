@@ -5,6 +5,20 @@ workflow and infrastructure checks. Scanner failures block the workflow. Reports
 remain restricted artifacts with seven-day retention; do not publish their source
 excerpts or potential credentials in public logs or issues.
 
+## Reporting and delivery
+
+The current repository delivery workflows run independently of security and quality
+reports. Source and dependency security checks run weekly or manually; CodeQL also
+runs weekly or manually. Findings and scanner failures remain visible in their own
+workflow and restricted report artifacts. See [CI pipelines](../CI-PIPELINES.md).
+
+`verify-package.yml` remains a strict reusable workflow for compatibility with
+older consumers. Current release paths use `build-package.yml` instead. The strict
+`verify-spa.yml` also remains for older consumers. Current weekly SPA checks use
+`security-spa.yml`, which collects all phase outcomes even after a finding; release
+image preparation uses `build-spa.yml`. SBOM generation and signature/identity checks are
+retained on release paths without a vulnerability gate.
+
 ## Toolchain refresh on 2026-10-24
 
 The binary pins use the official GitHub release assets and their published

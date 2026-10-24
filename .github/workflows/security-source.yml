@@ -28,7 +28,7 @@ jobs:
         if: github.repository != 'JanKrajewskiIT/velvetconfigs'
         with:
           repository: JanKrajewskiIT/velvetconfigs
-          ref: 4fd5cec48d9007aee67644ce29fdedef392f1dea # v3.20.0
+          ref: 5502536e65fc0434fe82d8eb8ca24eb8dbcef3f1 # v3.20.1
           path: tooling
           persist-credentials: false
           token: ${{ secrets.CONFIGS_READ_TOKEN || github.token }}
