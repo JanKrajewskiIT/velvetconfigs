@@ -5,16 +5,43 @@ workflow and infrastructure checks. Scanner failures block the workflow. Reports
 remain restricted artifacts with seven-day retention; do not publish their source
 excerpts or potential credentials in public logs or issues.
 
+## Toolchain refresh on 2026-10-24
+
+The binary pins use the official GitHub release assets and their published
+SHA-256 digests. The refresh adopts
+[Trivy 0.76.1](https://github.com/aquasecurity/trivy/releases/tag/v0.76.1)
+for both the binary and container, and
+[Cosign 3.1.4](https://github.com/sigstore/cosign/releases/tag/v3.1.4).
+Docker Hub metadata supplies the refreshed Trivy and Debian Bookworm SCM image
+digests and the Nginx Alpine slim patch release in `docker/Dockerfile.spa`.
+All images retain immutable digest pins and their existing runtime variants.
+
+Actionlint, Gitleaks, Opengrep, Zizmor, ZAP and OWASP CRS already match their
+latest stable releases or existing stable image tags at the time of this review.
+Their checked pins remain unchanged by this refresh. No newer dated WAF image
+was available, so its existing exception and expiry remain unchanged. Registry
+metadata and release notes do not establish passing scans or runtime checks.
+
 ## SAST engine and policy
 
 SAST uses the official Opengrep Linux x86-64 release binary. The version, download
 URL and SHA-256 are pinned in [tools.json](tools.json). The shared
 `scripts/security-tools.mjs` installer verifies its checksum before making the
 binary available. Opengrep is licensed under
-[LGPL 2.1](https://github.com/opengrep/opengrep/blob/v1.31.0/LICENSE) and declares
+[LGPL 2.1](https://github.com/opengrep/opengrep/blob/v1.32.0/LICENSE) and declares
 [support for primary constructors and other modern C# syntax](https://github.com/opengrep/opengrep/wiki/Support-for-C%23).
 Compatibility with a particular project's complete source still requires a scan;
 these declarations do not establish support for every preview C# feature.
+
+Opengrep 1.31.0 produced 124 C# parsing errors in QuantCore, including collection
+expressions with trailing commas, empty collection expressions in conditionals
+and interpolated raw strings. A zero-finding report from that run is incomplete
+scan evidence. [Opengrep 1.32.0](https://github.com/opengrep/opengrep/releases/tag/v1.32.0)
+adopts the upstream tree-sitter C# grammar with C# 14 support. The binary pin and
+SHA-256 in `tools.json` use that release's `opengrep_manylinux_x86` asset and
+GitHub-published asset digest. Keep the existing strict error policy and scan
+the complete consumer source to establish compatibility; the upgrade alone is
+not evidence that all parsing errors are resolved.
 
 The scanner runs inside a Debian-based `buildpack-deps` runtime image pinned by
 digest in `tools.json`. Its SCM variant includes Git, which the scanner needs for
@@ -69,9 +96,12 @@ or compiler dependency is introduced.
 
 ### Blocking policy
 
-The local [semgrep.yml](semgrep.yml) policy and the upstream
-`semgrep/semgrep-rules` commit remain unchanged. Their Semgrep names identify the
-rule format and upstream repository, not the active engine. JavaScript,
+The local [semgrep.yml](semgrep.yml) policy remains unchanged. The upstream
+`semgrep/semgrep-rules` revision is pinned in `tools.json`. The 2026-10-24 refresh
+advances it by one commit adding only a Dockerfile PHP rule and its fixture;
+the selected JavaScript, TypeScript and C# rule directories are unchanged.
+Their Semgrep names identify the rule format and upstream repository, not the
+active engine. JavaScript,
 TypeScript and C# continue to use the same rule directories, `ERROR` severity,
 `--error` and `--strict`. Do not suppress partial parsing or exclude C# to make a
 scan pass.
