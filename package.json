@@ -168,7 +168,7 @@
   },
   "devDependencies": {
     "web-vitals": "^6.2.3",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@typescript/native": "npm:typescript@^7.0.2",
     "eslint": "^10.13.0",
     "husky": "^9.1.7",
