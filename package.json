@@ -164,7 +164,7 @@
     "globals": "^17.13.0",
     "typescript-eslint": "^8.72.0",
     "vite-plugin-dts": "^5.1.2",
-    "vite-plugin-solid": "^2.11.14"
+    "vite-plugin-solid": "^2.11.15"
   },
   "devDependencies": {
     "web-vitals": "^6.2.3",
@@ -177,7 +177,7 @@
     "prettier": "^3.9.10",
     "publint": "^0.3.25",
     "typescript": "npm:@typescript/typescript6@~6.0.2",
-    "vite": "^8.3.5",
+    "vite": "^8.3.6",
     "dependency-cruiser": "^18.7.0",
     "jscpd": "~5.4.2"
   },
