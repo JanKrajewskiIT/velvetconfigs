@@ -26,11 +26,13 @@ in `dependency-security`; source findings in `security-*`; CodeQL in
 through the repository's Actions permissions. Download reports before expiry
 when tracking a correction for longer.
 
-The release uses local `build-package.yml` and the quality workflow uses local
-`quality-package.yml`. Their canonical templates are maintained in VelvetConfigs;
-local copies let each repository adopt the change without a new shared release.
-Update the copies together when changing these templates. Existing external
-scanner and publisher references remain pinned to immutable commits.
+This repository owns `build-package.yml`, `build-spa.yml`, `quality-package.yml`,
+`security-dependencies.yml` and `security-spa.yml`. Its own workflows use these
+local definitions. Consumer repositories reuse the published VelvetConfigs 3.21.0
+workflows pinned to `ad587f572dab1149288acf3f8001a7ea6ea9e225`; their temporary
+local workflow copies have been removed. Update consumer workflow references when
+adopting a subsequent shared release. Nested tooling pins remain owned by the
+published workflow version.
 
 SBOM generation inventories dependencies without checking advisory databases.
 Retaining and signing an SBOM on the delivery path does not establish a clean
