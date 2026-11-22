@@ -14,7 +14,7 @@ The factory:
 
 The factory MUST:
 
-- Register `vite-plugin-solid` with any consumer-supplied plugin options.
+- Register `@solidjs/vite-plugin` with any consumer-supplied plugin options.
 - Configure a path alias mapping a token (default `~`) to the source directory (default `src`). Passing `alias: null` disables the alias entirely.
 - Compose its base config with the optional user config via Vite's `mergeConfig` helper so consumer overrides are deep-merged correctly.
 - Deduplicate `optimizeDeps.include`, `optimizeDeps.exclude`, and `resolve.dedupe` arrays after the merge so repeated entries from layered configs do not bloat the final config.
@@ -78,7 +78,7 @@ Internal merge order (most-specific wins):
 - `ApiProxyOptions`, `LinkedWorkspaceOptions`, `LinkedWorkspaceFileAlias`, and `CreateSolidAppViteConfigOptions` interfaces.
 - The `createSolidAppViteConfig` function signature with both arguments typed and the return typed as Vite's `UserConfig`.
 
-Type-only re-exports from `vite-plugin-solid` (the Solid plugin's options) and `vite` (`UserConfig`, `LibraryFormats`, `BuildOptions`) are imported via `import type` so the declarations remain peer-only.
+Import the Solid plugin options from `@solidjs/vite-plugin` and the Vite configuration types from `vite` with `import type`.
 
 ## Step 8 — Export entry
 

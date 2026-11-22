@@ -63,8 +63,8 @@ Deliver a single npm package that ships shared tooling presets for SolidJS appli
 | Formatting            | Prettier                                                                    |
 | Style linting         | Stylelint with `stylelint-config-standard` + CSS Modules overrides          |
 | TypeScript            | Multiple base tsconfigs (app, node, +Vite client, +Node types, lib, test)   |
-| Bundling (app)        | Vite + `vite-plugin-solid`                                                  |
-| Bundling (library)    | Vite + `vite-plugin-solid` + `vite-plugin-dts`                              |
+| Bundling (app)        | Vite + `@solidjs/vite-plugin`                                               |
+| Bundling (library)    | Vite + `@solidjs/vite-plugin` + `vite-plugin-dts`                           |
 | Staged-file gating    | `lint-staged`                                                               |
 | Git hooks             | Husky pre-commit script                                                     |
 | Runtime web server    | Nginx config for SPA hosting                                                |

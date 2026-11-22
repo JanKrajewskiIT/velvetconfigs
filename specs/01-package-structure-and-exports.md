@@ -36,7 +36,7 @@ The `package.json` MUST:
 
 ## Step 3 — Optional peer dependencies
 
-Every tool runtime (ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged) is declared as a peer dependency with a permissive major-version range. Each peer is ALSO declared in `peerDependenciesMeta` with `"optional": true`.
+The tooling peers (ESLint, Prettier, Stylelint, TypeScript, Vite, lint-staged) are declared in `peerDependenciesMeta` with `"optional": true`.
 
 Consequences of the optional-peer model:
 
@@ -44,7 +44,9 @@ Consequences of the optional-peer model:
 - npm does not warn or fail when an optional peer is missing.
 - The preset's regular `dependencies`, including Stylelint's standard config and the Vite plugins, are installed unconditionally. Optional peers avoid installing the tool runtimes, not their preset-owned integrations.
 
-`peerDependenciesMeta` MUST contain exactly the names declared in `peerDependencies`. The legacy manifest's orphan entries for `vite-plugin-dts` and `vite-plugin-solid` are invalid metadata and MUST NOT be reproduced; both packages remain regular dependencies.
+`peerDependenciesMeta` declares the optional tooling peers. The required Solid
+peers are `solid-js` and `@solidjs/web`, both on major version 2. The two Vite
+plugins remain regular dependencies.
 
 ## Step 4 — Dependencies (preset plugins)
 
@@ -68,6 +70,7 @@ The audited dependency ranges are part of the reproducible baseline:
 | Package                            | Range      |
 | ---------------------------------- | ---------- |
 | `@eslint/js`                       | `^9.x`     |
+| `@solidjs/vite-plugin`             | `^3.0.1`   |
 | `eslint-config-prettier`           | `^10.1.8`  |
 | `eslint-plugin-css-modules`        | `^2.12.0`  |
 | `eslint-plugin-jsx-a11y`           | `^6.10.2`  |
@@ -77,7 +80,6 @@ The audited dependency ranges are part of the reproducible baseline:
 | `globals`                          | `^17.12.0` |
 | `typescript-eslint`                | `^8.70.1`  |
 | `vite-plugin-dts`                  | `^5.1.1`   |
-| `vite-plugin-solid`                | `^2.11.14` |
 
 Runtime peer ranges are `eslint ^10.0.0`, `lint-staged ^17.0.0`, `prettier ^3.0.0`, `stylelint ^17.0.0`, `stylelint-config-standard ^40.0.0`, `typescript ^6.0.0`, and `vite ^8.0.0`.
 

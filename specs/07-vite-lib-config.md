@@ -8,7 +8,7 @@ Add `createSolidLibViteConfig` to the same `vite/index.mjs` module that hosts th
 
 The factory MUST:
 
-- Register `vite-plugin-solid` with any consumer-supplied plugin options.
+- Register `@solidjs/vite-plugin` with any consumer-supplied plugin options.
 - Register `vite-plugin-dts` with `insertTypesEntry: true` by default, unless the consumer disables declaration emission by passing `dts: false`.
 - Configure a path alias mapping a token (default `~`) to the source directory.
 - Configure Vite's library mode (`build.lib`) with the entry, file name, and output formats.

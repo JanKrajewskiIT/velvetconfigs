@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import solidPlugin from '@solidjs/vite-plugin';
 import { mergeConfig, normalizePath } from 'vite';
-import solidPlugin from 'vite-plugin-solid';
 
 const appTsconfig = JSON.parse(readFileSync(new URL('../tsconfig/app.json', import.meta.url), 'utf8'));
 
@@ -37,8 +37,6 @@ const resolveCallable = (moduleExport, specifier) => {
   }
   return factory;
 };
-
-const createSolidPlugin = resolveCallable(solidPlugin, 'vite-plugin-solid');
 
 const resolveProjectRoot = (projectRoot) => path.resolve(projectRoot ?? process.cwd());
 
@@ -140,7 +138,7 @@ export const createSolidAppViteConfig = (userConfig = {}, options = {}) => {
   const { version } = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   return dedupeConfigArrays(
     mergeLayers([
-      { plugins: [createSolidPlugin(solidPluginOptions)] },
+      { plugins: solidPlugin(solidPluginOptions) },
       { build: { manifest: true } },
       { define: { __VELVET_APP_VERSION__: JSON.stringify(version) } },
       buildAliasConfig({ alias, projectRoot, srcDir }),
@@ -266,7 +264,7 @@ export const createSolidLibViteConfig = async (userConfig = {}, options = {}) =>
     ? [...new Set([...externalPackages, ...readPackageDependencies(path.resolve(projectRoot, 'package.json'))])]
     : externalPackages;
 
-  const plugins = [createSolidPlugin(solidPluginOptions)];
+  const plugins = solidPlugin(solidPluginOptions);
   const dtsPlugin = await loadDtsPlugin(dts, formats, projectRoot, userConfig.build?.outDir ?? DEFAULT_OUT_DIR);
   if (dtsPlugin !== null) {
     plugins.push(dtsPlugin);

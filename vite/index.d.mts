@@ -1,6 +1,6 @@
+import type { Options as SolidPluginOptions } from '@solidjs/vite-plugin';
 import type { BuildOptions, LibraryFormats, UserConfig } from 'vite';
 import type { PluginOptions as DtsPluginOptions } from 'vite-plugin-dts';
-import type { Options as SolidPluginOptions } from 'vite-plugin-solid';
 
 export interface ApiProxyOptions {
   readonly enabled?: boolean;

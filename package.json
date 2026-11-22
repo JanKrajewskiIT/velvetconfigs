@@ -114,10 +114,12 @@
     "quality:check": "npm run architecture:check && npm run duplicates:report && npm run deps:strict"
   },
   "peerDependencies": {
+    "@solidjs/web": "^2",
     "web-vitals": "^6.2.3",
     "eslint": "^10.15.0",
     "lint-staged": "^17.6.2",
     "prettier": "^3.10.1",
+    "solid-js": "^2",
     "stylelint": "^18.1.0",
     "stylelint-config-standard": "^41.1.0",
     "typescript": ">=6.0.0 <6.1.0",
@@ -155,6 +157,7 @@
   "dependencies": {
     "@eslint/compat": "^2.1.1",
     "@eslint/js": "^10.0.1",
+    "@solidjs/vite-plugin": "^3.0.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-css-modules": "^2.12.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -163,8 +166,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.14.0",
     "typescript-eslint": "8.72.2",
-    "vite-plugin-dts": "^5.1.2",
-    "vite-plugin-solid": "^2.11.17"
+    "vite-plugin-dts": "^5.1.2"
   },
   "devDependencies": {
     "web-vitals": "^6.2.3",

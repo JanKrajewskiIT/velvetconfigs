@@ -24,7 +24,7 @@ Foundational compiler options:
 - `isolatedModules: true` — guarantees each file is independently transpilable, required by Vite.
 - `moduleDetection: "force"` — every file is treated as a module even without imports/exports.
 - `noEmit: true` — type checking only; bundler emits JavaScript.
-- `jsx: "preserve"` with `jsxImportSource: "solid-js"` — preserves JSX for the Solid plugin to compile.
+- `jsx: "preserve"` with `jsxImportSource: "@solidjs/web"` gives Solid's Vite plugin JSX to compile and selects the Solid 2 web JSX types.
 
 Strictness profile:
 
