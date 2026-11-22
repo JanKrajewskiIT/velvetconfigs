@@ -19,22 +19,13 @@ older consumers. Current release paths use `build-package.yml` instead. The stri
 image preparation uses `build-spa.yml`. SBOM generation and signature/identity checks are
 retained on release paths without a vulnerability gate.
 
-## Toolchain refresh on 2026-10-24
+## Toolchain pins
 
 The binary pins use the official GitHub release assets and their published
-SHA-256 digests. The refresh adopts
-[Trivy 0.76.1](https://github.com/aquasecurity/trivy/releases/tag/v0.76.1)
-for both the binary and container, and
-[Cosign 3.1.4](https://github.com/sigstore/cosign/releases/tag/v3.1.4).
-Docker Hub metadata supplies the refreshed Trivy and Debian Bookworm SCM image
-digests and the Nginx Alpine slim patch release in `docker/Dockerfile.spa`.
-All images retain immutable digest pins and their existing runtime variants.
-
-Actionlint, Gitleaks, Opengrep, Zizmor, ZAP and OWASP CRS already match their
-latest stable releases or existing stable image tags at the time of this review.
-Their checked pins remain unchanged by this refresh. No newer dated WAF image
-was available, so its existing exception and expiry remain unchanged. Registry
-metadata and release notes do not establish passing scans or runtime checks.
+SHA-256 digests. Keep the Trivy binary and container on the same version.
+Use the registry manifest digest for the selected image tag. The Nginx base
+image is pinned in `docker/Dockerfile.spa` and the security images are pinned in
+[tools.json](tools.json).
 
 ## SAST engine and policy
 
@@ -42,7 +33,7 @@ SAST uses the official Opengrep Linux x86-64 release binary. The version, downlo
 URL and SHA-256 are pinned in [tools.json](tools.json). The shared
 `scripts/security-tools.mjs` installer verifies its checksum before making the
 binary available. Opengrep is licensed under
-[LGPL 2.1](https://github.com/opengrep/opengrep/blob/v1.32.0/LICENSE) and declares
+[LGPL 2.1](https://github.com/opengrep/opengrep/blob/v2.0.0/LICENSE) and declares
 [support for primary constructors and other modern C# syntax](https://github.com/opengrep/opengrep/wiki/Support-for-C%23).
 Compatibility with a particular project's complete source still requires a scan;
 these declarations do not establish support for every preview C# feature.
@@ -50,12 +41,10 @@ these declarations do not establish support for every preview C# feature.
 Opengrep 1.31.0 produced 124 C# parsing errors in QuantCore, including collection
 expressions with trailing commas, empty collection expressions in conditionals
 and interpolated raw strings. A zero-finding report from that run is incomplete
-scan evidence. [Opengrep 1.32.0](https://github.com/opengrep/opengrep/releases/tag/v1.32.0)
-adopts the upstream tree-sitter C# grammar with C# 14 support. The binary pin and
-SHA-256 in `tools.json` use that release's `opengrep_manylinux_x86` asset and
-GitHub-published asset digest. Keep the existing strict error policy and scan
-the complete consumer source to establish compatibility; the upgrade alone is
-not evidence that all parsing errors are resolved.
+scan evidence. [Opengrep 2.0.0](https://github.com/opengrep/opengrep/releases/tag/v2.0.0)
+uses the upstream tree-sitter C# grammar. The binary pin selects the static
+`opengrep_linux_x86` release asset, which runs without Python. Keep the strict
+error policy and scan the complete consumer source to establish compatibility.
 
 The scanner runs inside a Debian-based `buildpack-deps` runtime image pinned by
 digest in `tools.json`. Its SCM variant includes Git, which the scanner needs for
@@ -65,8 +54,7 @@ rules and verified binary read-only. Temporary extraction and cache files use
 the container's temporary filesystem. No scanner credentials are forwarded to
 the container.
 
-The container sets `LC_ALL=C.UTF-8` so Opengrep's embedded Python reads rule
-files using UTF-8 rather than the minimal runtime's ASCII locale.
+The container sets `LC_ALL=C.UTF-8` for deterministic UTF-8 handling.
 
 The Vite preset reads its shipped tsconfig through Node's file API using a
 module-relative URL. The pinned Opengrep JavaScript parser does not accept JSON
@@ -181,46 +169,25 @@ Publish these Configs changes together, refresh the consumer lockfile and create
 a fresh SPA artifact. A workflow SHA update alone cannot replace the embedded
 WAF pin and its image exception policy.
 
-The repository owner approved a temporary exception on 2026-10-19 for
-`CVE-2026-88806` in `libx11 1.8.13-r0`, with `HIGH` severity. The exact image
-references, digest, rationale and expiry are recorded in
-[image-exceptions.json](image-exceptions.json). Its two entries cover the same
-pinned image: the tagged reference used by the SPA gate and the repository digest
-returned by Docker for periodic scans. This accepts the identified risk without
-remediating the package; other findings remain blocking. The exception expires
-at 23:59:59 UTC on 2026-10-25 and must be removed when a patched WAF image is
-adopted. The scanner rejects expired exceptions.
+The amd64 and arm64 SBOMs for the November 19 WAF build list `libx11 1.8.14-r0`.
+The two exceptions for `CVE-2026-88806` applied to the previous WAF digest
+and expired on October 25, 2026. [image-exceptions.json](image-exceptions.json)
+now contains an empty exception list. The scanner rejects expired exceptions
+and blocks findings at the policy's configured severity.
 
-## Adopting this migration
+## Adopting scanner updates
 
-Updating local Configs files does not update an already published reusable
-workflow. External consumers also use the immutable Configs checkout inside
-`security-source.yml` to load scanner scripts and `tools.json`.
+On GitHub.com, reusable workflows that check out Configs tooling use
+`job.workflow_sha` to load scripts and policy from the commit that defines
+the job. The Configs repository's own source workflow reads its local checkout.
+SPA workflows use the scripts, tools and image pins included in the SPA artifact.
 
-If a consumer still produces `semgrep.json`, inspect both its reusable workflow
-reference and the external `tooling` checkout in that workflow. Updating the npm
-package alone changes neither reference. A rerun of an older workflow revision
-also retains that revision's scanner configuration.
-
-An internal tooling pin update requires publishing a new workflow commit and
-pinning consumers to that resulting commit. An existing release tag still loads
-its original workflow bytes, even after the internal pin is changed locally.
-When the npm package already contains the required policy, this workflow-only
-publication does not require another npm release or retagging the package.
-
-1. Review and publish a Configs commit containing the Opengrep binary metadata,
-   runtime pin, shared tool-directory helper and scanner changes. The Configs
-   repository's own source workflow reads its local checkout.
-2. Pin `security-source.yml`'s external `tooling` checkout to that published commit
-   and publish the workflow update. Do not invent a future SHA or reuse a tag for
-   changed bytes. Keeping the old tooling checkout will load the old scanner.
-3. Update consumer reusable workflow references to the resulting published
-   workflow commit. This includes both direct security calls and callers of
-   `verify-package.yml`, which invokes source scanning itself.
-4. Run the source security workflow against the consumer. Confirm that SAST uses
-   Opengrep, records any const-type-parameter normalization, produces its JSON
-   report and completes without parsing errors. A prepared configuration alone
-   is not successful scan evidence.
+1. Publish the Configs changes and pin the consumer's reusable workflows to
+   the published commit. Update callers of `verify-package.yml` as well.
+2. For SPA changes, update the Configs package in the consumer's lockfile and
+   create a fresh SPA artifact.
+3. Run the consumer's security workflow. Confirm that SAST produces its
+   Opengrep JSON report and completes without parsing errors.
 
 For a manually prepared Linux workspace, install the declared npm version and run
 `npm ci --prefix tooling --ignore-scripts --no-audit --no-fund --registry https://registry.npmjs.org`

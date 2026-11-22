@@ -1,13 +1,12 @@
 # CI pipelines
 
-Delivery and reporting are independent workflows. A failed security or code quality
-report does not block publication or deployment. Build failures, missing artifacts,
-archive identity mismatches, signing failures, SSH host identity failures and
-production health/TLS failures still stop delivery.
+Package publication runs independently of security and code quality reporting.
+Build failures, missing artifacts, archive identity mismatches and signing failures
+stop publication.
 
 | Workflow                      | Trigger                            | Responsibility                                                     |
 | ----------------------------- | ---------------------------------- | ------------------------------------------------------------------ |
-| `publish.yml`                 | Existing delivery events           | Build, publish and deploy the release artifact.                    |
+| `publish.yml`                 | Push of a `v*` tag                 | Build, sign and publish the npm package to GitHub Packages.        |
 | `ci.yml` calling `verify.yml` | Push to main, pull request, manual | Run the existing quality checks and retain results for correction. |
 | `security.yml`                | Monday 05:23 UTC or manual         | Source security and dependency audits.                             |
 | `codeql.yml`                  | Tuesday 06:41 UTC or manual        | CodeQL security and quality analysis.                              |
@@ -28,11 +27,10 @@ when tracking a correction for longer.
 
 This repository owns `build-package.yml`, `build-spa.yml`, `quality-package.yml`,
 `security-dependencies.yml` and `security-spa.yml`. Its own workflows use these
-local definitions. Consumer repositories reuse the published VelvetConfigs 3.21.0
-workflows pinned to `ad587f572dab1149288acf3f8001a7ea6ea9e225`; their temporary
-local workflow copies have been removed. Update consumer workflow references when
-adopting a subsequent shared release. Nested tooling pins remain owned by the
-published workflow version.
+local definitions. Consumer repositories pin shared workflows to a VelvetConfigs
+release commit. When a shared workflow checks out tooling, it loads scripts and
+policy from the commit that defines the workflow job. Consumers adopt updates by
+changing their workflow references to the new release commit.
 
 SBOM generation inventories dependencies without checking advisory databases.
 Retaining and signing an SBOM on the delivery path does not establish a clean
@@ -44,11 +42,7 @@ requires security or quality success, remove that reporting check from the requi
 set to apply this policy there too. Keep delivery/build checks required as needed.
 Repository settings have not been changed by this configuration edit.
 
-## Validation scope
+## Verification
 
-Workflow YAML, embedded JavaScript syntax, local workflow input/secret contracts,
-job dependencies and weekly schedule configuration have been checked locally.
-This does not establish successful GitHub Actions execution or a passing scan.
-
-`npm run verify` from `./` remains unrun for this change.
-No scanner, registry publication, SSH deployment or active staging scan was executed.
+Run `npm run verify` from the repository root for the local quality gate.
+GitHub Actions records publication and security results in their respective runs.

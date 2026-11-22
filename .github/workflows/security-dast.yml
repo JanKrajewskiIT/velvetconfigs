@@ -22,7 +22,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: JanKrajewskiIT/velvetconfigs
-          ref: 5502536e65fc0434fe82d8eb8ca24eb8dbcef3f1 # v3.20.1
+          # Round-trip the job context for actionlint 1.7.12 and fail checkout if the workflow SHA is missing.
+          ref: ${{ fromJSON(toJSON(job)).workflow_sha || 'refs/heads/' }}
           path: tooling
           persist-credentials: false
           token: ${{ secrets.CONFIGS_READ_TOKEN || github.token }}
